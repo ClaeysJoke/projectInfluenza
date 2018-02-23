@@ -61,7 +61,7 @@ subroutine rk4 ( t0, u0, dt, f, u )
 end
 
 
-subroutine rk4vec (m, t0, u0, dt, f, u )
+subroutine rk4vec (m, t0, u0, dt, fvec, u )
 
   implicit none
 
@@ -84,15 +84,13 @@ subroutine rk4vec (m, t0, u0, dt, f, u )
 
   t1 = t0 + 0.5*dt
   u1(1:m) = u0(1:m) + 0.5*dt * f0(1:m)
-  call f ( t1, m, u1, f1 )
-
-  t2 = t0 + 0.5*dt
+  call fvec (m, t1, u1, f1 )
   u2(1:m) = u0(1:m) + 0.5*dt * f1(1:m)
-  call f ( t2, m, u2, f2 )
+  call fvec (m, t1, u2, f2 )
 
   t3 = t0 + dt
   u3(1:m) = u0(1:m) + dt * f2(1:m)
-  call f ( t3, m, u3, f3 )
+  call fvec (m, t3, u3, f3 )
   u(1:m) = u0(1:m) + ( dt /6.0 ) * ( &
                  f0(1:m) &
      + 2.0* f1(1:m) &
@@ -114,22 +112,25 @@ subroutine fvec (m,t,u,uprime)
 integer :: m
 real (kind=selected_real_kind(8) ) :: u(m), uprime(m)
 real (kind=selected_real_kind(8) ) :: t
-uprime = 3.0*t**2
+uprime(1) = -2.0*u(1)*u(2)
+uprime(2) = 2.0*u(1)*u(2)-1.4*u(2)
+uprime(3) = 1.4*u(2)
 end subroutine fvec
 
 program test_prog
-real ( kind=selected_real_kind(8) ) u, ui
-real ( kind=selected_real_kind(8) ):: dt,t0
-external :: f
-dt=0.1000000000000000000
-ui=1
-t0=1
-do i=0,10
-call rk4 (t0+i*dt, ui, dt, f, u)
-print*, t0+(i+1)*dt,u
+real ( kind=selected_real_kind(8) ) u(3), ui(3)
+real ( kind=selected_real_kind(8) ):: dt,ti
+external :: fvec
+dt=1
+ui(1)=0.9
+ui(2)=0.0002
+ui(3)=0.0998
+ti=0
+do i=0,40
+call rk4vec (3,ti+i*dt, ui, dt, fvec, u)
+print*, ti+(i+1)*dt,u, u(1)+u(2)+u(3)
 ui=u
 end do
 end program
-
 
 
