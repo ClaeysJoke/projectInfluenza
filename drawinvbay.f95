@@ -6,7 +6,13 @@ PROGRAM drawinvbay
   real*8,dimension(4,2) :: A
   real*8,dimension(4) :: b
   integer :: N
-  
+  real*8, dimension(:), allocatable :: array_kappa
+  integer :: nr_values, i 
+  real*8 :: normal
+
+  nr_values = 10
+  allocate(array_kappa(nr_values))
+	
   mu(1) = 0.0144
   mu(2) = 17.9
   
@@ -18,12 +24,16 @@ PROGRAM drawinvbay
   sigma = reshape((/0.000036, -0.0187, -0.0187, 16.09/), shape(sigma))
   SigmaInv = reshape((/70093.66, 81.46373,81.46373, 0.1568285/), shape(SigmaInv))
   
-  kappa = rand_gamma(2.0_8,0.0001_8)
-  print*,kappa
+  !kappa = rand_gamma(2.0_8,0.0001_8)
+  !print*,kappa
+
+
   !lambda = rand_gamma(2.0_8,0.0001_8)
   !print*,lambda
   !S0 = 0.9
+
   !I0 = rand_beta(1.62_8,7084.10_8) !these values by fitting a beta distribution to historical ILI+ for t=0
+  !print*,I0
   !R0 = 1-S0-I0
   
   !lower(1) = I0
@@ -40,6 +50,9 @@ PROGRAM drawinvbay
   !z = rand_truncated_normal(mu,sigma,SigmaInv,N,A,b)
   
   !rho = calculate_rho(10,I0,S0,PI)
+
+  normal = rand_normal(5.0_8,1.0_8)
+  print*,normal
 contains
 
 !OK
@@ -62,6 +75,7 @@ RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
         c = 1.0/(9.0*d)**0.5
         DO while (.true.)
             x = rand_normal(0.0_8, 1.0_8)
+		!print*,x
             v = 1.0 + c*x
             DO while (v <= 0.0)
                 x = rand_normal(0.0_8, 1.0_8)
@@ -69,6 +83,7 @@ RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
             END DO
 
             v = v*v*v
+	    call init_random_seed()
             CALL RANDOM_NUMBER(u)
             xsq = x*x
             IF ((u < 1.0 -.0331*xsq*xsq) .OR.  &
@@ -80,6 +95,7 @@ RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
         END DO
       ELSE
         g = rand_gamma(shape+1.0, 1.0_8)
+	call init_random_seed()
         CALL RANDOM_NUMBER(w)
         ans=scale*g*(w)**(1.0/shape)
         RETURN
@@ -287,11 +303,16 @@ FUNCTION rand_normal(mean,stdev) RESULT(c)
       	real*8 :: theta,r
 	real*8, dimension(2) :: temp
 	real*8,parameter :: PI_8 = 4*ATAN(1.0_8)
+	
 
+	call init_random_seed()
+	
         CALL RANDOM_NUMBER(temp)
+	!print*,temp
         r=(-2.0*log(temp(1)))**0.5
         theta = 2.0*PI_8*temp(2)
         c= mean+stdev*r*sin(theta)
+
       
 END FUNCTION
 
@@ -423,6 +444,23 @@ function evaluate_g_inverse(x,I0,S0,PI) result(fx)
 	fx = I0 + S0 - PI - x*(log(S0) + 1 - log(x))
 end function
 
+
+ SUBROUTINE init_random_seed()
+            INTEGER :: i, n, clock
+            INTEGER, DIMENSION(:), ALLOCATABLE :: seed
+          
+            CALL RANDOM_SEED(size = n)
+            ALLOCATE(seed(n))
+          
+            CALL SYSTEM_CLOCK(COUNT=clock)
+          
+            seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+            CALL RANDOM_SEED(PUT = seed)
+          
+            DEALLOCATE(seed)
+ END SUBROUTINE
+
+        
 !FUNCTION TruncatedGaussian(sigma ,range) RESULT(X)
 !	implicit none
 !	real*8 :: sigma
