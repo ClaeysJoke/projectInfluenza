@@ -1,5 +1,6 @@
 module simplex
 
+!min cx s.t. Ax=b; x>=0
 FUNCTION simplex_method(A,b,c,irule) RESULT (istatus,X,eta,iB,iN,xB)
 
 REAL,DIMENSION(:,:),ALLOCATABLE :: X
