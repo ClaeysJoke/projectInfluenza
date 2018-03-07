@@ -1,32 +1,34 @@
+
+
 !************************************************************
-!						LINPROG								*
-!															*
+!			LINPROG				    *
+!							    *
 !************************************************************
-! The following code tries to solve the linear programming	*
-! problem													*				
-!			minimize (f^t)*x								*
-!			s.t. A*x<=b										*
-! when f,A,b are given										*
-! or the problem											*
-!			minimize (f^t)*x								*
-!			s.t. A*x<=b && lb<=x<=ub						*
-! when f,A,b,lb,ub are given.								*
-! NO EQUALITY CONSTRAINTS									*
-! It uses the simplex algorithm								*
-!															*
+! The following code tries to solve the linear programming  *
+! problem						    *
+!			minimize (f^t)*x		    *
+!			s.t. A*x<=b			    *
+! when f,A,b are given					    *
+! or the problem					    *
+!			minimize (f^t)*x		    *
+!			s.t. A*x<=b && lb<=x<=ub	    *
+! when f,A,b,lb,ub are given.				    *
+! NO EQUALITY CONSTRAINTS				    *
+! It uses the simplex algorithm				    *
+!							    *
 ! In what follows suffix _1 will refer to the first problem,*
-! suffix _2 refers to the second							*
-! Both are converted to the standard form					*
-! 			minimize (g^t)*y								*
-!			s.t. C*y=d && y>=0								*
-!															*
+! suffix _2 refers to the second			    *
+! Both are converted to the standard form		    *
+! 			minimize (g^t)*y		    *
+!			s.t. C*y=d && y>=0		    *
+!							    *
 !************************************************************
 
 
 
 
 !************************************************************
-!						PART ONE: SETUP
+!			PART ONE: SETUP
 !
 !************************************************************
 
@@ -53,10 +55,10 @@ contains
 
 
 subroutine Check_1(f, A, b, nineqcstr, nvars)
- integer								:: nineqcstr, nvars
- real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 	    :: A
- real(kind=selected_real_kind(8))									:: f(nvars)
- real(kind=selected_real_kind(8))									:: b(nineqcstr)
+ integer							:: nineqcstr, nvars
+ real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 	:: A
+ real(kind=selected_real_kind(8))				:: f(nvars)
+ real(kind=selected_real_kind(8))				:: b(nineqcstr)
  
  if (nvars .eq. 0) then
   stop "Badly defined problem"
@@ -71,11 +73,11 @@ end subroutine
 
 subroutine Check_2(f, A, b, nineqcstr, nvars, lb, ub)
 
- integer								:: nineqcstr, nvars,i
+ integer							:: nineqcstr, nvars,i
  real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 	:: A
- real(kind=selected_real_kind(8)), dimension(nvars) 				:: f,lb,ub
- real(kind=selected_real_kind(8)), dimension(nineqcstr) 			:: b
- logical 								:: msg
+ real(kind=selected_real_kind(8)), dimension(nvars) 		:: f,lb,ub
+ real(kind=selected_real_kind(8)), dimension(nineqcstr) 	:: b
+ logical 							:: msg
 
  do i=1,nvars
  msg=(lb(i)<=ub(i))
@@ -98,13 +100,13 @@ end subroutine
 !
 !
 subroutine Convert_1(f0, A0, b0, f, A, b, nineqcstr, nvars)
-integer												:: nineqcstr,nvars,i
-real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 					:: A0
-real(kind=selected_real_kind(8)), dimension(nvars)								:: f0
-real(kind=selected_real_kind(8)), dimension(nineqcstr)							:: b0
-real(kind=selected_real_kind(8)), allocatable 									:: A(:,:)
-real(kind=selected_real_kind(8)), allocatable									:: f(:)
-real(kind=selected_real_kind(8)), allocatable									:: b(:)
+integer								:: nineqcstr,nvars,i
+real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 	:: A0
+real(kind=selected_real_kind(8)), dimension(nvars)		:: f0
+real(kind=selected_real_kind(8)), dimension(nineqcstr)		:: b0
+real(kind=selected_real_kind(8)), allocatable 			:: A(:,:)
+real(kind=selected_real_kind(8)), allocatable			:: f(:)
+real(kind=selected_real_kind(8)), allocatable			:: b(:)
 allocate(A(nineqcstr,(2*nvars)+nineqcstr))
 allocate(f(2*nvars+nineqcstr))
 allocate(b(nineqcstr))
@@ -126,13 +128,13 @@ end subroutine
 !	  (A0 Id 0 )
 !	A=(Id 0  Id)
 subroutine Convert_2(f0, A0,b0, f, A, b, nineqcstr, nvars,lb,ub)
-integer										:: nineqcstr,nvars,i
-real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 			:: A0
-real(kind=selected_real_kind(8))										:: f0(nvars),lb(nvars),ub(nvars)
-real(kind=selected_real_kind(8))										:: b0(nineqcstr)
-real(kind=selected_real_kind(8)), allocatable										:: b(:)
-real(kind=selected_real_kind(8)), allocatable										:: A(:,:)
-real(kind=selected_real_kind(8)), allocatable										:: f(:)
+integer								:: nineqcstr,nvars,i
+real(kind=selected_real_kind(8)), dimension(nineqcstr,nvars) 	:: A0
+real(kind=selected_real_kind(8))				:: f0(nvars),lb(nvars),ub(nvars)
+real(kind=selected_real_kind(8))				:: b0(nineqcstr)
+real(kind=selected_real_kind(8)), allocatable			:: b(:)
+real(kind=selected_real_kind(8)), allocatable			:: A(:,:)
+real(kind=selected_real_kind(8)), allocatable			:: f(:)
 allocate(f(nvars+nvars+nineqcstr))
 allocate(b(nvars+nineqcstr))
 allocate(A(nineqcstr+nvars,nvars+nineqcstr+nvars))
@@ -159,7 +161,7 @@ end module
 
 
 !************************************************************
-!				PART TWO: SOLVING STANDARD PROBLEM
+!		PART TWO: SOLVING STANDARD PROBLEM
 !
 !************************************************************
 
@@ -169,8 +171,8 @@ subroutine solve(f,A,b, Arows, Acolumns, SOL, nvars)
 integer 			:: nvars
 integer				:: Arows, Acolumns,j,n,m,i,n0
 integer				:: nonbasic(nvars), basic(Arows), L(Arows-1)
-real(kind=selected_real_kind(8))				:: f(Acolumns), b(Arows), A(Arows,Acolumns), AT(Acolumns,Arows),SOL(nvars),t
-real(kind=selected_real_kind(8)) 				:: Z(Acolumns)
+real(kind=selected_real_kind(8)):: f(Acolumns), b(Arows), A(Arows,Acolumns), AT(Acolumns,Arows),SOL(nvars),t
+real(kind=selected_real_kind(8)):: Z(Acolumns)
 
 SOL(:)=0.0
 
@@ -224,20 +226,20 @@ end subroutine
 
 
 !************************************************************
-!							MAIN
+!			     MAIN
 !
 !************************************************************
 
 program main
 use SETUP
- real(kind=selected_real_kind(8)), dimension(6,2) 	:: A0
- real(kind=selected_real_kind(8))					:: f0(2),lb(2),ub(2)
+ real(kind=selected_real_kind(8)), dimension(6,2)	:: A0
+ real(kind=selected_real_kind(8))			:: f0(2),lb(2),ub(2)
  real(kind=selected_real_kind(8)),allocatable 		:: f(:), A(:,:), b(:)
- real(kind=selected_real_kind(8)) 					:: b0(6)
- real(kind=selected_real_kind(8)) 					:: SOL(2),Time(100)
- real(kind=selected_real_kind(8))					:: TOLFUN,T
- INTEGER											:: T1,T2, count_rate, count_max,S1,S2
- integer											:: Bounded
+ real(kind=selected_real_kind(8)) 			:: b0(6)
+ real(kind=selected_real_kind(8)) 			:: SOL(2),Time(100)
+ real(kind=selected_real_kind(8))			:: TOLFUN,T
+ INTEGER						:: T1,T2, count_rate, count_max,S1,S2
+ integer						:: Bounded
  !DEFINE THE PROBLEM
  Bounded=1 !Set to 0 for unbounded, 1 for bounded problem
  lb(1)=-1
