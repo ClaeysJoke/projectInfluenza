@@ -1,4 +1,5 @@
 module Sampling
+  implicit none
   integer, parameter :: KREAL = (0.d0)
 
 contains
@@ -54,7 +55,7 @@ contains
 
   function Transition(X, gradX, dt, destination)
     real(KREAL) :: X, gradX, dt, destination
-    
+
   end function
 
 end module
