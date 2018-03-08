@@ -12,7 +12,7 @@ real(KREAL), allocatable :: X, gradX
 real(KREAL), allocatable :: pdfX
 integer :: count
 integer :: burnIn, sampleRate, nbSamples
-real(KREAL), allocatable :: dt
+real(KREAL) :: dt
 integer :: nbComponents
 
 
@@ -32,13 +32,13 @@ call Posterior(X,y,pdfX)
 ! MCMC Burn-in
 do count = 1, burnIn
   ! Generate new sample during burn-in
-  call GenerateSample(X,gradX,pdfX,y)
+  call GenerateSample(X,gradX,pdfX,y,dt)
 enddo
 
 ! Generate real samples
 do count = 1, nbSamples
   !Generate samples
-  call GenerateSample(X,gradX,pdfX,y)
+  call GenerateSample(X,gradX,pdfX,y,dt)
   if (MODULO(count,nbSamples)==0)then
     !Write to file, print out, ....
     WRITE
