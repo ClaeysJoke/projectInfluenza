@@ -512,21 +512,24 @@ function evaluate_g_inverse(x,I0,S0,PI) result(fx)
 	fx = I0 + S0 - PI - x*(log(S0) + 1 - log(x))
 end function
 
-
- SUBROUTINE init_random_seed()
-            INTEGER :: i, n, clock
+SUBROUTINE init_random_seed()
+            INTEGER :: i, n, clock,clock2
             INTEGER, DIMENSION(:), ALLOCATABLE :: seed
-          
+            real	:: y
             CALL RANDOM_SEED(size = n)
             ALLOCATE(seed(n))
           
             CALL SYSTEM_CLOCK(COUNT=clock)
-          
+	    clock2=clock
             seed = clock + 37 * (/ (i - 1, i = 1, n) /)
             CALL RANDOM_SEED(PUT = seed)
           
             DEALLOCATE(seed)
- END SUBROUTINE
+	    
+	    do while(clock .eq. clock2)
+		CALL SYSTEM_CLOCK(COUNT=clock2)
+	    end do
+END SUBROUTINE
 
         
 !FUNCTION TruncatedGaussian(sigma ,range) RESULT(X)
