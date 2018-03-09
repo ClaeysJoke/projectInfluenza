@@ -15,6 +15,9 @@ program Metropolis
   real(KREAL) :: dt
   integer :: nbComponents
 
+  burnIn = 5
+  sampleRate = 1
+  nbSamples = 50
 
   allocate(y(t))
   allocate(theta(3*t))
@@ -22,10 +25,13 @@ program Metropolis
   allocate(X(nbComponents), gradX(nbComponents))
 
   ! Read y from data
-  call readData(y,t)
+  !call readData(y,t)
+
+  y = 0
 
   ! Initialize parameter vectors
-  call SamplePrior(X)
+  !call SamplePrior(X)
+  X = 0.5
   call Gradient(X,y,gradX)
   call Posterior(X,y,pdfX)
 
@@ -41,7 +47,7 @@ program Metropolis
     call GenerateSample(X,gradX,pdfX,y,dt)
     if (MODULO(count,nbSamples)==0)then
       !Write to file, print out, ....
-      WRITE
+      print *, count
     endif
   enddo
 

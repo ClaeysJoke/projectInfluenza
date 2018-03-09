@@ -1,61 +1,83 @@
 module Sampling
+  use Normal
   implicit none
-  integer, parameter :: KREAL = (0.d0)
+  real*8,parameter :: PI = 4*ATAN(1.0_8)
 
 contains
   subroutine GenerateSample(X,gradX,pdfX,y,dt)
-    real(KREAL), intent(inout) :: X(:), gradX(:), pdfX
-    real(KREAL), intent(in) :: y(:)
-    real(KREAL), intent(in) :: dt
+    real*8, intent(inout) :: X(:), gradX(:), pdfX
+    real*8, intent(in) :: y(:)
+    real*8, intent(in) :: dt
 
-    real(KREAL) :: fromTrial, toTrial
-    real(KREAL) :: U
-    real(KREAL) :: pdfTrialX
+    real*8 :: fromTrial, toTrial
+    real*8 :: U
+    real*8 :: pdfTrialX
 
+    do !Loop until acceptable sample is generated
     ! Generate trial
-    call GenerateTrial(X,gradX,trialX)
+      call GenerateTrial(X,gradX,dt,trialX)
     ! Calculate trial gradient
-    call Gradient(trialX,y,gradTrialX)
+      call Gradient(trialX,y,gradTrialX)
 
     ! Sample Uniform distribution for accept-reject
-    call RANDOM_NUMBER(U)
+      call RANDOM_NUMBER(U)
 
     ! Call functions for accept reject
-    call Posterior(trialX, y, pdfTrialX)
-    fromTrial =  Transition(trialX,gradTrialX,dt,X)
-    toTrial = Transition(X,gradX,dt,trialX)
+      call Posterior(trialX, y, pdfTrialX)
+      fromTrial =  Transition(trialX,gradTrialX,dt,X)
+      toTrial = Transition(X,gradX,dt,trialX)
 
     ! Accept reject
-    if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
-      X = trialX
-      gradX = gradTrialX
-      pdfX = pdfTrialX
-      exit
-    endif
+      if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
+        X = trialX
+        gradX = gradTrialX
+        pdfX = pdfTrialX
+        exit
+      endif
     enddo
   end subroutine
 
-  subroutine GenerateTrial(X,gradX,trialX)
-    real(KREAL), intent(out) :: trialX(:)
-    real(KREAL), intent(in) :: X(:), gradX(:)
+  subroutine GenerateTrial(X,gradX,dt,trialX)
+    real*8, intent(out) :: trialX(:)
+    real*8, intent(in) :: X(:), gradX(:), dt
+    integer :: i
+    real*8, allocatable :: xi(:)
 
+    allocate(xi(size(X)))
+
+    do i = 1,size(xi)
+      xi(i) = rand_normal(0.0,1.0)
+    enddo
+
+    trialX = X - gradX*dt + SQRT(2.0*dt)*xi
+
+    deallocate(xi)
   end subroutine
 
   subroutine Gradient(X,y,gradX)
-    real(KREAL), intent(in) :: X,y
-    real(KREAL), intent(out) :: gradX
-
+    real*8, intent(in) :: X(:),y(:)
+    real*8, intent(out) :: gradX(:)
+    gradX = -X
   end subroutine
 
   subroutine Posterior(X,y,pdfX)
-    real(KREAL), intent(in) :: X,y
-    real(KREAL), intent(out) :: pdfX
-
+    real*8, intent(in) :: X(:),y(:)
+    real*8, intent(out) :: pdfX
+    pdfX = 0.5
   end subroutine
 
   function Transition(X, gradX, dt, destination)
-    real(KREAL) :: X, gradX, dt, destination
+    real*8 :: X(:), gradX(:), dt, destination(:)
+    real*8, allocatable :: mu(:)
 
+
+    allocate(mu(size(X)))
+    mu = destination - (X-gradX*dt)
+
+    Transition = EXP(-0.5*(sqrt(2*dt)**(-1)*DOT_PRODUCT(destination-mu,destination-mu))) &
+    /(sqrt((2*PI)**size(X)*sqrt(2*dt)**size(X)))
+
+    deallocate(mu)
   end function
 
 end module
