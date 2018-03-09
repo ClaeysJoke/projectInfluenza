@@ -1,6 +1,6 @@
 PROGRAM drawinvbay
 
-  real (kind = selected_real_kind(8) ) :: kappa, lambda, S0, I0,R0
+  real (kind = selected_real_kind(8) ) :: kappa, lambda, S0, I0,R0,beta
   real*8,dimension(2) :: mu,lower,upper
   real*8,dimension(2,2) :: sigma, SigmaInv
   real*8,dimension(4,2) :: A
@@ -8,7 +8,10 @@ PROGRAM drawinvbay
   integer :: N
   real*8, dimension(:), allocatable :: array_kappa
   integer :: nr_values, i 
-  real*8 :: normal
+  real*8 :: normal, PI, PT
+  real*8, dimension(17) :: X_beta, tau
+  real*8, dimension(1,2) :: z
+  
 
   nr_values = 10
   allocate(array_kappa(nr_values))
@@ -24,35 +27,78 @@ PROGRAM drawinvbay
   sigma = reshape((/0.000036, -0.0187, -0.0187, 16.09/), shape(sigma))
   SigmaInv = reshape((/70093.66, 81.46373,81.46373, 0.1568285/), shape(SigmaInv))
   
-  !kappa = rand_gamma(2.0_8,0.0001_8)
+  kappa = rand_gamma(2.0_8,0.0001_8)
   !print*,kappa
 
 
-  !lambda = rand_gamma(2.0_8,0.0001_8)
+  lambda = rand_gamma(2.0_8,0.0001_8)
   !print*,lambda
-  !S0 = 0.9
+  S0 = 0.9
 
-  !I0 = rand_beta(1.62_8,7084.10_8) !these values by fitting a beta distribution to historical ILI+ for t=0
+  I0 = rand_beta(1.62_8,7084.10_8) !these values by fitting a beta distribution to historical ILI+ for t=0
   !print*,I0
-  !R0 = 1-S0-I0
+  R0 = 1-S0-I0
   
-  !lower(1) = I0
-  !b(1) = upper(1)
-  !b(2) = upper(2)
-  !b(3) = -lower(1)
-  !b(4) = -lower(2)
+  lower(1) = I0
+  b(1) = upper(1)
+  b(2) = upper(2)
+  b(3) = -lower(1)
+  b(4) = -lower(2)
   
-  !N=1 !how many samples do you want
+  N=1 !how many samples do you want
   
-  !rows_A = SIZE(A,1)
-  !columns_A = SIZE(A,2)
-  !rows_b = SIZE(b,1)
+  rows_A = SIZE(A,1)
+  columns_A = SIZE(A,2)
+  rows_b = SIZE(b,1)
+
+  z = accept_reject(I0)
+  !print *,z(1,1)
+  !print *,z(1,2)
+
   !z = rand_truncated_normal(mu,sigma,SigmaInv,N,A,b)
-  
+
+  !PI = z(1)
+  !PT = z(2)  
+
   !rho = calculate_rho(10,I0,S0,PI)
 
-  normal = rand_normal(5.0_8,1.0_8)
-  print*,normal
+  X_beta(1) = 1
+  X_beta(2) = log(PT)
+  X_beta(3) = (log(PT))**2
+  X_beta(4) = log(I0)
+  X_beta(5) = (log(I0))**2
+  X_beta(6) = log(rho)
+  X_beta(7) = (log(rho))**2
+  X_beta(8) = (log(rho))**3
+  X_beta(9) = (log(rho))**4
+  X_beta(10) = log(I0)*log(rho)
+  X_beta(11) = ((log(I0))**2)*log(rho)
+  X_beta(12) = log(I0)*((log(rho))**2)
+  X_beta(13) = ((log(I0))**2)*((log(rho))**2)
+  X_beta(14) = log(I0)*((log(rho))**3)
+  X_beta(15) = ((log(I0))**2)*((log(rho))**3)
+  X_beta(16) = log(I0)*((log(rho))**4)
+  X_beta(17) = ((log(I0))**2)*((log(rho))**4)
+
+tau(1) = -49.7540
+tau(2) = -0.9577
+tau(3) = -0.0065
+tau(4) = -9.4896
+tau(5) = -0.3761
+tau(6) = -590.0001
+tau(7) = -2537.6102
+tau(8) = -4756.1828
+tau(9) = -3265.2458
+tau(10) = -102.2665
+tau(11) = -4.0162
+tau(12) = -430.9596
+tau(13) = -16.7104
+tau(14) = -798.3443
+tau(15) = -30.6638
+tau(16) = -543.8857
+tau(17) = -20.7459
+
+  !beta = EXP(dot_product(X_beta,tau) + 0.5*(0.0421**2))
 contains
 
 !OK
@@ -116,6 +162,28 @@ FUNCTION rand_beta(a, b) RESULT(ans)
        u = rand_gamma(a, 1.0_8)
        v = rand_gamma(b, 1.0_8)
        ans = u / (u + v)
+END FUNCTION
+
+FUNCTION accept_reject(lb1) RESULT (z)
+	implicit none
+	real*8, dimension(1,2) :: z
+	real*8 :: lb1,PI,PT
+	integer :: succeed,i
+	succeed = 0
+	i=0
+	OPEN(1,FILE='normal_02_00100.txt') !you become this by running normal_distribution.f95
+    		do while ((i .LT. 100) .AND. (succeed .EQ. 0))
+    			READ(1,*) PI ,PT
+			print*,PI
+			print*,PT
+    			IF ((PI.LT.1) .AND. (PI.GT.lb1) .AND. (PT.LT.35) .AND. (PT.GT.1)) THEN
+    				succeed = 1
+			ENDIF
+			i = i + 1
+    		enddo
+   	CLOSE(1)
+	z(1,1) = PI
+	z(1,2) = PT
 END FUNCTION
 
 !OK
