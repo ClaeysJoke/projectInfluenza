@@ -2,6 +2,20 @@ MODULE Normal
 implicit none
 
 contains
+  SUBROUTINE init_random_seed()
+            INTEGER :: i, n, clock
+            INTEGER, DIMENSION(:), ALLOCATABLE :: seed
+
+            CALL RANDOM_SEED(size = n)
+            ALLOCATE(seed(n))
+
+            CALL SYSTEM_CLOCK(COUNT=clock)
+
+            seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+            CALL RANDOM_SEED(PUT = seed)
+          
+            DEALLOCATE(seed)
+  END SUBROUTINE
   FUNCTION rand_normal(mean,stdev) RESULT(c)
 	   implicit none
      real*8, intent(in) :: mean, stdev

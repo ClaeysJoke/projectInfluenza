@@ -8,10 +8,13 @@ contains
     real*8, intent(inout) :: X(:), gradX(:), pdfX
     real*8, intent(in) :: y(:)
     real*8, intent(in) :: dt
+    real*8, allocatable :: trialX(:),gradTrialX(:)
 
     real*8 :: fromTrial, toTrial
     real*8 :: U
     real*8 :: pdfTrialX
+
+    allocate(trialX(size(X)),gradTrialX(size(gradX)))
 
     do !Loop until acceptable sample is generated
     ! Generate trial
@@ -28,13 +31,15 @@ contains
       toTrial = Transition(X,gradX,dt,trialX)
 
     ! Accept reject
-      if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
+      !if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
         X = trialX
         gradX = gradTrialX
         pdfX = pdfTrialX
         exit
-      endif
+      !endif
     enddo
+
+    deallocate(trialX,gradTrialX)
   end subroutine
 
   subroutine GenerateTrial(X,gradX,dt,trialX)
@@ -46,7 +51,7 @@ contains
     allocate(xi(size(X)))
 
     do i = 1,size(xi)
-      xi(i) = rand_normal(0.0,1.0)
+      xi(i) = rand_normal(0.0D0,1.0D0)
     enddo
 
     trialX = X - gradX*dt + SQRT(2.0*dt)*xi
@@ -66,7 +71,7 @@ contains
     pdfX = 0.5
   end subroutine
 
-  function Transition(X, gradX, dt, destination)
+  real*8 function Transition(X, gradX, dt, destination)
     real*8 :: X(:), gradX(:), dt, destination(:)
     real*8, allocatable :: mu(:)
 

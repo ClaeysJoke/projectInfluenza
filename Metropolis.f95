@@ -1,23 +1,23 @@
 program Metropolis
-  implicit none
   use Sampling
+  implicit none
 
   integer :: t !Timewindow in weeks
-  integer, parameter :: KREAL = (0.d0)
 
-  real(KREAL), dimension(9) :: phi
-  real(KREAL), allocatable :: theta(:)
-  real(KREAL), allocatable :: y
-  real(KREAL), allocatable :: X, gradX
-  real(KREAL), allocatable :: pdfX
+  real*8, dimension(9) :: phi
+  real*8, allocatable :: theta(:)
+  real*8, allocatable :: y(:)
+  real*8, allocatable :: X(:), gradX(:)
+  real*8 :: pdfX
   integer :: count
   integer :: burnIn, sampleRate, nbSamples
-  real(KREAL) :: dt
+  real*8 :: dt
   integer :: nbComponents
 
   burnIn = 5
   sampleRate = 1
   nbSamples = 50
+  t = 5
 
   allocate(y(t))
   allocate(theta(3*t))
@@ -39,13 +39,14 @@ program Metropolis
   do count = 1, burnIn
     ! Generate new sample during burn-in
     call GenerateSample(X,gradX,pdfX,y,dt)
+    print *, "Burn-in"
   enddo
-
+  count = 1
   ! Generate real samples
   do count = 1, nbSamples
     !Generate samples
     call GenerateSample(X,gradX,pdfX,y,dt)
-    if (MODULO(count,nbSamples)==0)then
+    if (MODULO(count,sampleRate)==0)then
       !Write to file, print out, ....
       print *, count
     endif
