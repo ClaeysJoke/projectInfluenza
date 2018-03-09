@@ -2,6 +2,18 @@
 !			PART ONE: SOLVERS
 !				
 !******************************************************************
+module DIFF_SOLVER
+
+interface fwdEuler
+module procedure fwdEuler, fwdEulerVec
+end interface
+
+interface rk4
+	module procedure rk4, rk4Vec
+end interface
+
+contains
+
 subroutine fwdEuler (t0, u0, dt, f, u)
 implicit none
 real ( kind = selected_real_kind(8) ) :: dt,t0,f0,u,u0
@@ -65,7 +77,7 @@ subroutine rk4 ( t0, u0, dt, f, u )
 end
 
 
-subroutine rk4vec (m, t0, u0, dt, fvec, u,beta,gamm)
+subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   implicit none
 
@@ -104,7 +116,7 @@ subroutine rk4vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   return
 end
-
+end module
 !******************************************************************
 !		    PART TWO: DIFFERENTIAL EQUATIONS
 !				
@@ -233,17 +245,8 @@ gamm=0.5
 !print*, ti+(i+1)*dt,u, u(1)+u(2)+u(3)
 !ui=u
 !end do
-do i=1,100
-call system_clock(clock,count_rate,count_max)
-print *,"CLOCK is ",clock
-seed=191*MODULO(clock,2383)
-print *,"SEED IS ", seed
-call drawGamma(real(0.5,8),X,seed)
-call system_clock(clock,count_rate,count_max)
-print *, X
-end do
+
 
 end program
-
 
 
