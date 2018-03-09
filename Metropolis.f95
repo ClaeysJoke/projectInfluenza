@@ -1,5 +1,6 @@
 program Metropolis
   use Sampling
+  use Reading
   implicit none
 
   integer :: t !Timewindow in weeks
@@ -25,13 +26,10 @@ program Metropolis
   allocate(X(nbComponents), gradX(nbComponents))
 
   ! Read y from data
-  !call readData(y,t)
-
-  y = 0
+  call readData(y,t)
 
   ! Initialize parameter vectors
-  !call SamplePrior(X)
-  X = 0.5
+  call SamplePrior(X)
   call Gradient(X,y,gradX)
   call Posterior(X,y,pdfX)
 
