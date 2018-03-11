@@ -39,6 +39,7 @@ real*8 function pdfTruncatedNormal(X,bound)
   real*8 :: abs_error, rel_error
   real*8 :: error
   integer :: nevals,inform
+
   real*8,dimension(2) :: mu
   real*8,dimension(2) :: upper
   real*8,dimension(2,2) :: COVRNC,CONSTR
@@ -60,6 +61,7 @@ real*8 function pdfTruncatedNormal(X,bound)
   s_X = sqrt(COVRNC(1,1))
   s_Y = sqrt(COVRNC(2,2))
   rho = COVRNC(1,2)/(s_X*s_Y)
+
 
   abs_error = 1D-5
   rel_error = 1D-5
@@ -90,9 +92,12 @@ end function
 real*8 function pdfDirichlet(X,alpha)
   real*8, dimension(3) :: X,alpha
   real*8 :: beta
+  real*8 :: one, zero
+  one = 1.0D0
+  zero = 0.0D0
 
-  if ((0.0<X(1)).and.(X(1)<1.0).and.(0.0<X(2)).and.(X(2)<1.0) &
-  (0.0<X(3)).and.(X(3)<1.0).and.((1.0-X(1)-X(2)-X(3))<(100.0*EPSILON(X(1))))) then
+  if ((zero<X(1)).and.(X(1)<one).and.(zero<X(2)).and.(X(2)<one).and. &
+  (zero<X(3)).and.(X(3)<one).and.((one-X(1)-X(2)-X(3))<(100.0D0*EPSILON(X(1))))) then
 
     beta = PRODUCT(GAMMA(alpha))/GAMMA(SUM(alpha))
 
