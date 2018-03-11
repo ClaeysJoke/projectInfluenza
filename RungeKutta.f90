@@ -1,3 +1,6 @@
+
+
+
 !******************************************************************
 !			PART ONE: SOLVERS
 !				
@@ -29,19 +32,21 @@ u=u0+dt*f0
 
 end subroutine
 
-subroutine fwdEulerVec (m,t0, u0, dt, f, u)
+subroutine fwdEulerVec (m,t0, u0, dt, fvec, u,beta, gamm)
 implicit none
 integer :: m
-real ( kind = selected_real_kind(8) ) :: dt,t0,f0(m),u(m),u0(m)
+real ( kind = selected_real_kind(8) ) :: dt,t0,f0(m),u(m),u0(m), beta, gamm
 
 interface
-subroutine fvec(m, t,u,uprime)
+subroutine fvec(m,t,u,uprime,beta, gamm)
 integer :: m
-real ( kind = selected_real_kind(8) ) :: t,u,uprime
+real (kind=selected_real_kind(8) ) :: u(m), uprime(m)
+real (kind=selected_real_kind(8) ) :: t
+real (kind=selected_real_kind(8) ) :: beta,gamm
 end subroutine fvec
 end interface
 
-call f(m,t0,u0,f0)
+call fvec(m,t0,u0,f0,beta,gamm)
 u(1:m)=u0(1:m)+dt*f0(1:m)
 
 end subroutine
@@ -74,7 +79,7 @@ subroutine rk4 ( t0, u0, dt, f, u )
   u3 = u0 + dt * f2
   call f ( t3, u3, f3 ) 
   u = u0 + dt * ( f0 + 2.0 * f1 + 2.0 * f2 + f3 ) / 6.0
-end
+end subroutine
 
 
 subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
@@ -90,7 +95,7 @@ subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   interface
 
-  subroutine fvec(m,t,u,uprime,beta,gamm)
+  subroutine fvec(m,t,u,uprime, beta, gamm)
   integer:: m
   real ( kind=selected_real_kind(8) )  :: t,u(m),uprime(m),beta,gamm
   end subroutine fvec
@@ -115,14 +120,19 @@ subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
      +           f3(1:m) )
 
   return
-end
+end subroutine
 end module
+
 !******************************************************************
 !		    PART TWO: DIFFERENTIAL EQUATIONS
 !				
 !******************************************************************
 
+module DIFF
 
+implicit none
+
+contains
 !EQUATION TO BE SOLVED GOES HERE
 subroutine f (t,u,uprime)
 real (kind=selected_real_kind(8) ) u
@@ -140,7 +150,7 @@ uprime(1) = -1*beta*u(1)*u(2)
 uprime(2) = beta*u(1)*u(2)-gamm*u(2)
 uprime(3) = gamm*u(2)
 end subroutine fvec
-
+end module
 !******************************************************************
 !		  PART THREE: RANDOM SAMPLERS
 !				
@@ -151,18 +161,17 @@ module RANDOM
 implicit none
 
 contains
-subroutine drawDirichlet(D,param,theta)
+subroutine drawDirichlet(m,param,theta)
 implicit none
-!Subroutine that draws from D-dimensional Dirichlet 
+!Subroutine that draws from m-dimensional Dirichlet 
 !using gamma distribution Gamm(alpha,1)
-integer, intent(in) :: D
+integer, intent(in) :: m
 integer	:: i
-real (kind=selected_real_kind(8) ), intent(in) :: param(D)
-real (kind=selected_real_kind(8) ), intent(out) ::theta(D)
-real (kind=selected_real_kind(8) ) :: rand_gamma
+real (kind=selected_real_kind(8) ), intent(in) :: param(m)
+real (kind=selected_real_kind(8) ), intent(out) ::theta(m)
 real (kind=selected_real_kind(8) ) :: y,s
 s=0.0
-do i=1,D
+do i=1,m
 y= rand_gamma(real(1.0,kind=selected_real_kind(8)),param(i))
 theta(i)=y
 s=s+y
@@ -174,13 +183,9 @@ end subroutine drawDirichlet
 RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
 	implicit none
 	real (kind=selected_real_kind(8) ) :: ans
-	real (kind=selected_real_kind(8) ), intent(in) :: shape, scale
-      	real (kind=selected_real_kind(8) ) :: u,w,d,c,x,xsq,g,v
-	interface 
-		real (kind=selected_real_kind(8) ) function rand_normal(mean,stdev)
-		real (kind=selected_real_kind(8) ), intent(in) :: mean
-		real (kind=selected_real_kind(8) ), intent(in) :: stdev
-      IF (shape <= 0.0) THEN
+	real (kind=selected_real_kind(8) ), intent(in) :: shape, scale !shape and scale
+     	real (kind=selected_real_kind(8) ) :: u,w,d,c,x,xsq,g,v
+     IF (shape <= 0.0) THEN
 
         WRITE(*,*) "Shape PARAMETER must be positive"
       END IF
@@ -222,7 +227,6 @@ RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
 END FUNCTION
 
 
-
 SUBROUTINE init_random_seed()
             INTEGER :: i, n, clock
             INTEGER, DIMENSION(:), ALLOCATABLE :: seed
@@ -238,10 +242,27 @@ SUBROUTINE init_random_seed()
             DEALLOCATE(seed)
 END SUBROUTINE
 
+FUNCTION rand_beta(a, b) RESULT(ans)
+	implicit none
+	real(kind=selected_real_kind(8) ), intent(in) :: a,b
+	real(kind=selected_real_kind(8) )			  :: ans
+    real(kind=selected_real_kind(8) ) 			  :: u,v
+	
+      IF ((a <= 0.0) .OR. (b <= 0.0)) THEN
+
+        WRITE(*,*) "Beta PARAMETERs must be positive"
+      END IF
+      
+       u = rand_gamma(a, 1.0_8)
+       v = rand_gamma(b, 1.0_8)
+       ans = u / (u + v)
+	   
+END FUNCTION
+
 FUNCTION rand_normal(mean,stdev) RESULT(c)
 	implicit none
 	real(kind=selected_real_kind(8) ), intent(in) :: mean, stdev
-      	real(kind=selected_real_kind(8) ) :: theta,r
+    real(kind=selected_real_kind(8) ) :: theta,r,c
 	real(kind=selected_real_kind(8) ), dimension(2) :: temp
 	real(kind=selected_real_kind(8) ),parameter :: PI_8 = 4*ATAN(1.0_8)
 	
@@ -252,7 +273,7 @@ FUNCTION rand_normal(mean,stdev) RESULT(c)
 	!print*,temp
         r=(-2.0*log(temp(1)))**0.5
         theta = 2.0*PI_8*temp(2)
-        random_normal = mean+stdev*r*sin(theta)
+        c = mean+stdev*r*sin(theta)
 
       
 END FUNCTION
@@ -264,26 +285,29 @@ end module
 !		    		MAIN
 !				
 !******************************************************************
-
-program test_prog
+!Feed this subroutine the estimated parameters (beta, gamma, kappa, lambda) and the 
+!number of iterates K
+subroutine DBSSM(K,beta,gamma,kappa,lambda, theta)
 use RANDOM
-real ( kind=selected_real_kind(8) ) u(3), ui(3)
-real ( kind=selected_real_kind(8) ):: dt,ti,theta(2)
-real ( kind=selected_real_kind(8) ):: beta,gamm,X
-integer :: seed,clock,count_rate,count_max,i
-
-external :: fvec
+use DIFF_SOLVER
+use DIFF
+real ( kind=selected_real_kind(8) ):: dt,t0,theta(3),y(K)
+real ( kind=selected_real_kind(8) ):: beta,gamm,kappa, lambda
+integer :: seed,clock,count_rate,count_max,i,K,m
 dt=1
-ui(1)=0.9
-ui(2)=0.0002
-ui(3)=0.0998
-ti=0
-beta=3.5
-gamm=0.5
-call init_random_seed()
-call drawDirichlet(2, (/real(1.0,selected_real_kind(8)),real(1.0,selected_real_kind(8))/),theta)
+t0=0
+y=0.0
 
+do i=1,K
+ call init_random_seed()
+ call rk4vec(m, t0, theta, dt, fvec, theta,beta,gamm)
+ call drawDirichlet(3, kappa*theta,theta)
+ y(i)=rand_beta(lambda*theta(1), lambda*(1-theta(1)))
+end do
 
+end subroutine
+program main
+print *, "test to be performed"
 end program
 
 
