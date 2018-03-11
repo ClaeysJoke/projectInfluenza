@@ -1,5 +1,6 @@
 module Sampling
   use Normal
+  use Pdf
   implicit none
   real*8,parameter :: PI = 4*ATAN(1.0_8)
 
