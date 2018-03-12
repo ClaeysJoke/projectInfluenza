@@ -1,6 +1,7 @@
 module Sampling
   use Normal
   use Pdf
+  use GradientModule
   implicit none
   real*8,parameter :: PI = 4*ATAN(1.0_8)
 
@@ -20,23 +21,29 @@ contains
     do !Loop until acceptable sample is generated
     ! Generate trial
       call GenerateTrial(X,gradX,dt,trialX)
+    ! Calculate probability of the new trial, if p=0, skip entire loop.
+      call Posterior(trialX, y, pdfTrialX)
+
+      if (pdfTrialX > 0) then
+
     ! Calculate trial gradient
-      call Gradient(trialX,y,gradTrialX)
+        call Gradient(trialX,y,gradTrialX)
 
     ! Sample Uniform distribution for accept-reject
-      call RANDOM_NUMBER(U)
+        call RANDOM_NUMBER(U)
 
     ! Call functions for accept reject
-      call Posterior(trialX, y, pdfTrialX)
-      fromTrial =  Transition(trialX,gradTrialX,dt,X)
-      toTrial = Transition(X,gradX,dt,trialX)
+
+        fromTrial =  Transition(trialX,gradTrialX,dt,X)
+        toTrial = Transition(X,gradX,dt,trialX)
 
     ! Accept reject
-      if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
-        X = trialX
-        gradX = gradTrialX
-        pdfX = pdfTrialX
-        exit
+        if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
+          X = trialX
+          gradX = gradTrialX
+          pdfX = pdfTrialX
+          exit
+        endif
       endif
     enddo
 
