@@ -287,25 +287,52 @@ end module
 !******************************************************************
 !Feed this subroutine the estimated parameters (beta, gamma, kappa, lambda) and the 
 !number of iterates K
-subroutine DBSSM(K,beta,gamma,kappa,lambda, theta)
+subroutine DBSSM(K,dt, t0, beta,gamm,kappa,lambda,theta0,theta,y)
 use RANDOM
 use DIFF_SOLVER
 use DIFF
-real ( kind=selected_real_kind(8) ):: dt,t0,theta(3),y(K)
-real ( kind=selected_real_kind(8) ):: beta,gamm,kappa, lambda
-integer :: seed,clock,count_rate,count_max,i,K,m
-dt=1
-t0=0
-y=0.0
 
-do i=1,K
+real ( kind=selected_real_kind(8) ), intent (in)   :: dt,t0
+real ( kind=selected_real_kind(8) ), intent (inout):: theta(3,K), y(K),theta0(3)
+real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
+integer 					   :: seed,clock,count_rate,count_max,i,K
+
  call init_random_seed()
- call rk4vec(m, t0, theta, dt, fvec, theta,beta,gamm)
- call drawDirichlet(3, kappa*theta,theta)
- y(i)=rand_beta(lambda*theta(1), lambda*(1-theta(1)))
+ call rk4vec(3, t0, theta0, dt, fvec, theta(1,1),beta,gamm)
+ y(1)=rand_beta(lambda*theta(2,1), lambda*(1-theta(2,1)))
+do i=2,K
+ call init_random_seed()
+ call rk4vec(3, t0, theta(:,i-1), dt, fvec, theta(:,i),beta,gamm)
+ call drawDirichlet(3, kappa*theta(:,i),theta(:,i))
+ y(i)=rand_beta(lambda*theta(2,i), lambda*(1-theta(2,i)))
 end do
 
 end subroutine
+
+function DBSSM_FUNC(K,dt, t0, beta,gamm,kappa,lambda,theta0) result(y_and_theta)
+ use RANDOM
+ use DIFF_SOLVER
+ use DIFF
+
+real ( kind=selected_real_kind(8) ), intent (in)   :: dt,t0
+real ( kind=selected_real_kind(8) ), intent (in)   :: theta0(3)
+real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,K)
+real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
+integer 					   :: seed,clock,count_rate,count_max,i,K
+
+ call init_random_seed()
+ call rk4vec(3, t0, theta0, dt, fvec, y_and_theta(1:3,1),beta,gamm)
+ y_and_theta(4,1)=rand_beta(lambda*y_and_theta(2,1), lambda*(1-y_and_theta(2,1)))
+do i=2,K
+ call init_random_seed()
+ call rk4vec(3, t0, y_and_theta(1:3,i-1), dt, fvec, y_and_theta(1:3,i),beta,gamm)
+ call drawDirichlet(3, kappa*y_and_theta(1:3,i),y_and_theta(1:3,i))
+ y_and_theta(4,i)=rand_beta(lambda*y_and_theta(2,i), lambda*(1-y_and_theta(2,i)))
+end do
+end function
+
+
+
 program main
 print *, "test to be performed"
 end program
