@@ -116,42 +116,166 @@ contains
 
   real*8 function gradLambda(X,y)
     real*8 :: X(:),y(:)
+    real*8 :: lambda
+    real*8 :: alpha,beta
+    integer :: t
+    real*8 :: thetaI
+    real*8 :: g,h,der_g,der_h
+    real*8 :: gammaLambda,gammaThetaI,gammaNegThetaI
+    real*8 :: digammaLambda
+    real*8 :: ONE = 1.0D0
+
+
+    lambda = X(2)
+    gammaLambda = GAMMA(lambda)
+    digammaLambda = digamma(lambda)
+    ! Parameters initializing
+    alpha = 2.0D0
+    beta = 0.0001D0
+    ! Gradient due to Gamma distribution
+    gradLambda = -beta**alpha*((alpha-1)*lambda**(alpha-2)*exp(-beta*lambda)  &
+            - beta*lambda**(alpha-2)*exp(-beta*lambda))/(pdfGamma(lambda)*GAMMA(alpha))
+
+    ! Loop over all y Beta distributions
+    do t = 1,size(y)
+      thetaI = X(11 + 3*(i-1))
+      pdf = pdfBeta(y(i),X(2)*thetaI,X(2)*(ONE-thetaI))
+
+      gammaThetaI = GAMMA(lambda*thetaI)
+      gammaNegThetaI = GAMMA(lambda*(ONE-thetaI))
+
+      g = y(t)**(lambda*thetaI-ONE)*(ONE-y(t))**(lambda*thetaI-ONE)
+      h = gammaThetaI*gammaNegThetaI/gammaLambda
+
+      der_g = (thetaI*log(y(t))+thetaI*log(ONE-y(t))+digammaLambda)&
+      * gammaLambda*y(t)**(lambda*thetaI-ONE)*(ONE-y(t))**(lambda*thetaI-ONE)
+      der_h = (thetaI*digamma(lambda*thetaI)+(ONE-thetaI)*digamma(ONE-thetaI))&
+      * gammaThetaI*gammaNegThetaI
+
+      gradLambda = gradLambda - (der_g*h- der_h*g)/(pdf*h**2)
+    end do
 
   end function
 
   real*8 function gradS(X,y)
     real*8 :: X(:),y(:)
-
+    gradS = 0.0D0
   end function
 
   real*8 function gradI(X,y)
     real*8 :: X(:),y(:)
+    real*8 :: alpha,beta
+    real*8 :: pdf
+    real*8 :: I
+    real*8 :: ONE = 1.0D0
+    real*8 :: TWO = 2.0D0
+    real*8 :: h = 0.001D0
+    real*8,dimension(2) :: z
+    real*8,dimension(3) :: dirichletWeights
+    real*8 :: thetaPlus,thetaMinus
 
+    I = X(4)
+
+    ! Beta distribution for I0
+    alpha = 1.62D0
+    beta = 7084.1D0
+
+    pdf = pdfBeta(I,alpha,beta)
+
+    gradI = -((alpha-ONE)*I**(alpha-TWO)*(ONE-I)**(beta-ONE) &
+    - (beta-ONE)*I**(alpha-ONE)*(ONE-I)**(beta-TWO) &
+    )*GAMMA(alpha+beta)/(GAMMA(alpha)*GAMMA(beta))/pdf
+
+    ! Derivative w.r.t truncated normal distribution, using finite central difference
+    z(1) = X(6)
+    z(2) = X(7)
+
+    pdf = pdfTruncatedNormal(z,I)
+
+    gradI = gradI - (pdfTruncatedNormal(z,I+0.5D0*h) - pdfTruncatedNormal(z,I-0.5D0*h)) &
+    /(h*pdf)
+
+    ! Derivative w.r.t update step theta0 => theta1
+    pdf = pdfDirichlet(X(10:12),X(1)*rkvec(X(3:5),X(9),X(9)*X(8)))
+      ! thetaPlus
+    dirichletWeights(1) = X(3)
+    dirichletWeights(2) = X(4) + 0.5D0
+    dirichletWeights(3) = X(5)
+
+    thetaPlus = pdfDirichlet(X(10:12),X(1)*rkvec(dirichletWeights,X(9),X(9)*X(8)))
+
+      ! thetaMinus
+    dirichletWeights(1) = X(3)
+    dirichletWeights(2) = X(4) - 0.5D0
+    dirichletWeights(3) = X(5)
+
+    thetaMinus = pdfDirichlet(X(10:12),X(1)*rkvec(dirichletWeights,X(9),X(9)*X(8)))
+
+      ! Combining
+    gradI = gradI - (thetaPlus-thetaMinus)/(h*pdf)
   end function
 
   real*8 function gradR(X,y)
     real*8 :: X(:),y(:)
-
+    gradR = 0.0D0
   end function
 
   real*8 function gradPI(X,y)
     real*8 :: X(:),y(:)
+    real*8,dimension(2) :: z
+    real*8 :: thetaI
+    real*8 :: pdf
+    real*8 :: PIPlus,PIMinus
+    real*8 :: h = 0.001D0
 
+    thetaI = X(4)
+
+    ! Original pdf
+    z(1) = X(6)
+    z(2) = X(7)
+    pdf = pdfTruncatedNormal(z,thetaI)
+
+    ! Central finite difference
+    z(1) = z(1) + h*0.5D0
+    PIPLus = pdfTruncatedNormal(z,thetaI)
+    z(1) = z(1) - h
+    PIMinus = pdfTruncatedNormal(z,thetaI)
+
+    gradPI = -(PIPLus-PIMinus)/(h*pdf)
   end function
 
   real*8 function gradPT(X,y)
     real*8 :: X(:),y(:)
+    real*8,dimension(2) :: z
+    real*8 :: thetaI
+    real*8 :: pdf
+    real*8 :: PTPlus,PTMinus
+    real*8 :: h = 0.001D0
 
+    thetaI = X(4)
+
+    ! Original pdf
+    z(1) = X(6)
+    z(2) = X(7)
+    pdf = pdfTruncatedNormal(z,thetaI)
+
+    ! Central finite difference
+    z(2) = z(2) + h*0.5D0
+    PTPLus = pdfTruncatedNormal(z,thetaI)
+    z(2) = z(2) - h
+    PTMinus = pdfTruncatedNormal(z,thetaI)
+
+    gradPT = -(PTPLus-PTMinus)/(h*pdf)
   end function
 
   real*8 function gradRho(X,y)
     real*8 :: X(:),y(:)
-
+    gradRho = 0.0D0
   end function
 
   real*8 function gradBeta(X,y)
     real*8 :: X(:),y(:)
-
+    gradBeta = 0.0D0
   end function
 
   subroutine gradTheta(X,y,gradX)

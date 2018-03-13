@@ -76,12 +76,6 @@ contains
     deallocate(xi)
   end subroutine
 
-  subroutine Gradient(X,y,gradX)
-    real*8, intent(in) :: X(:),y(:)
-    real*8, intent(out) :: gradX(:)
-    gradX = -X
-  end subroutine
-
 
   real*8 function Transition(X, gradX, dt, destination)
     real*8 :: X(:), gradX(:), dt, destination(:)
