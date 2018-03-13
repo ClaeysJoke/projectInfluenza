@@ -2,6 +2,7 @@ module Sampling
   use Normal
   use Pdf
   use GradientModule
+  use ODE
   implicit none
   real*8,parameter :: PI = 4*ATAN(1.0_8)
 

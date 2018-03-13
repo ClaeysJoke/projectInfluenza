@@ -43,7 +43,6 @@ CONTAINS
 
     REAL ( kind = 8 ), PARAMETER :: c = 8.5D+00
     REAL ( kind = 8 ), PARAMETER :: euler_mascheroni = 0.57721566490153286060D+00
-    REAL ( kind = 8 ) digamma
     INTEGER ( kind = 4 ) ifault
     REAL ( kind = 8 ) r
     REAL ( kind = 8 ) x

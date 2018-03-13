@@ -1,6 +1,7 @@
 module GradientModule
   use Pdf
   use PsiModule
+  use ODE
 
 contains
   ! Computes the gradient of the potential function V w.r.t. the parameter
@@ -32,7 +33,7 @@ contains
     real*8 :: gammaKappa,gammaS,gammaI,gammaR
     real*8 :: digammaKappa,digammaS,digammaI,digammaR
     integer :: ifault
-    real*8 :: pdf
+    real*8 :: probability
     real*8 :: thetaS,thetaI,thetaR
     real*8 :: alphaS,alphaI,alphaR
 
@@ -64,11 +65,11 @@ contains
       gammaS = GAMMA(kappa*alphaS)
       gammaI = GAMMA(kappa*alphaI)
       gammaR = GAMMA(kappa*alphaR)
-      digammaS = digamma(kappa*alphaS)
-      digammaI = digamma(kappa*alphaI)
-      digammaR = digamma(kappa*alphaR)
+      digammaS = digamma(kappa*alphaS,ifault)
+      digammaI = digamma(kappa*alphaI,ifault)
+      digammaR = digamma(kappa*alphaR,ifault)
 
-      pdf = pdfDirichlet(X(10:12),kappa*alpha_dirichlet)
+      probability = pdfDirichlet(X(10:12),kappa*alpha_dirichlet)
 
       g = thetaS**(kappa*alphaS)*thetaI**(kappa*alphaI)*thetaR**(kappa*alphaR)*gammaKappa
       h = gammaS*gammaI*gammaR
@@ -80,7 +81,7 @@ contains
       der_h = (alphaS*digammaS+alphaI*digammaI+alphaR*digammaR)&
       *gammaS*gammaI*gammaR
 
-      gradKappa = gradKappa - (der_g*h-g*der_h)/(pdf*h**2)
+      gradKappa = gradKappa - (der_g*h-g*der_h)/(probability*h**2)
 
     case default
       alpha_dirichlet = rkvec(X(10+3*(t-1):9+3*t),X(9),X(8)*X(9))
@@ -93,11 +94,11 @@ contains
       gammaS = GAMMA(kappa*alphaS)
       gammaI = GAMMA(kappa*alphaI)
       gammaR = GAMMA(kappa*alphaR)
-      digammaS = digamma(kappa*alphaS)
-      digammaI = digamma(kappa*alphaI)
-      digammaR = digamma(kappa*alphaR)
+      digammaS = digamma(kappa*alphaS,ifault)
+      digammaI = digamma(kappa*alphaI,ifault)
+      digammaR = digamma(kappa*alphaR,ifault)
 
-      pdf = pdfDirichlet(X(10+3*t:12+3*t),kappa*alpha_dirichlet)
+      probability = pdfDirichlet(X(10+3*t:12+3*t),kappa*alpha_dirichlet)
 
       g = thetaS**(kappa*alphaS)*thetaI**(kappa*alphaI)*thetaR**(kappa*alphaR)*gammaKappa
       h = gammaS*gammaI*gammaR
@@ -109,7 +110,7 @@ contains
       der_h = (alphaS*digammaS+alphaI*digammaI+alphaR*digammaR)&
       *gammaS*gammaI*gammaR
 
-      gradKappa = gradKappa - (der_g*h-g*der_h)/(pdf*h**2)
+      gradKappa = gradKappa - (der_g*h-g*der_h)/(probability*h**2)
     end select
     enddo
   end function
@@ -124,11 +125,12 @@ contains
     real*8 :: gammaLambda,gammaThetaI,gammaNegThetaI
     real*8 :: digammaLambda
     real*8 :: ONE = 1.0D0
+    integer :: ifault
 
 
     lambda = X(2)
     gammaLambda = GAMMA(lambda)
-    digammaLambda = digamma(lambda)
+    digammaLambda = digamma(lambda,ifault)
     ! Parameters initializing
     alpha = 2.0D0
     beta = 0.0001D0
@@ -139,7 +141,7 @@ contains
     ! Loop over all y Beta distributions
     do t = 1,size(y)
       thetaI = X(11 + 3*(i-1))
-      pdf = pdfBeta(y(i),X(2)*thetaI,X(2)*(ONE-thetaI))
+      probability = pdfBeta(y(i),X(2)*thetaI,X(2)*(ONE-thetaI))
 
       gammaThetaI = GAMMA(lambda*thetaI)
       gammaNegThetaI = GAMMA(lambda*(ONE-thetaI))
@@ -149,10 +151,10 @@ contains
 
       der_g = (thetaI*log(y(t))+thetaI*log(ONE-y(t))+digammaLambda)&
       * gammaLambda*y(t)**(lambda*thetaI-ONE)*(ONE-y(t))**(lambda*thetaI-ONE)
-      der_h = (thetaI*digamma(lambda*thetaI)+(ONE-thetaI)*digamma(ONE-thetaI))&
+      der_h = (thetaI*digamma(lambda*thetaI,ifault)+(ONE-thetaI)*digamma(lambda*(ONE-thetaI),ifault))&
       * gammaThetaI*gammaNegThetaI
 
-      gradLambda = gradLambda - (der_g*h- der_h*g)/(pdf*h**2)
+      gradLambda = gradLambda - (der_g*h- der_h*g)/(probability*h**2)
     end do
 
   end function
@@ -165,7 +167,7 @@ contains
   real*8 function gradI(X,y)
     real*8 :: X(:),y(:)
     real*8 :: alpha,beta
-    real*8 :: pdf
+    real*8 :: probability
     real*8 :: I
     real*8 :: ONE = 1.0D0
     real*8 :: TWO = 2.0D0
@@ -180,23 +182,23 @@ contains
     alpha = 1.62D0
     beta = 7084.1D0
 
-    pdf = pdfBeta(I,alpha,beta)
+    probability = pdfBeta(I,alpha,beta)
 
     gradI = -((alpha-ONE)*I**(alpha-TWO)*(ONE-I)**(beta-ONE) &
     - (beta-ONE)*I**(alpha-ONE)*(ONE-I)**(beta-TWO) &
-    )*GAMMA(alpha+beta)/(GAMMA(alpha)*GAMMA(beta))/pdf
+    )*GAMMA(alpha+beta)/(GAMMA(alpha)*GAMMA(beta))/probability
 
     ! Derivative w.r.t truncated normal distribution, using finite central difference
     z(1) = X(6)
     z(2) = X(7)
 
-    pdf = pdfTruncatedNormal(z,I)
+    probability = pdfTruncatedNormal(z,I)
 
     gradI = gradI - (pdfTruncatedNormal(z,I+0.5D0*h) - pdfTruncatedNormal(z,I-0.5D0*h)) &
-    /(h*pdf)
+    /(h*probability)
 
     ! Derivative w.r.t update step theta0 => theta1
-    pdf = pdfDirichlet(X(10:12),X(1)*rkvec(X(3:5),X(9),X(9)*X(8)))
+    probability = pdfDirichlet(X(10:12),X(1)*rkvec(X(3:5),X(9),X(9)*X(8)))
       ! thetaPlus
     dirichletWeights(1) = X(3)
     dirichletWeights(2) = X(4) + 0.5D0
@@ -212,7 +214,7 @@ contains
     thetaMinus = pdfDirichlet(X(10:12),X(1)*rkvec(dirichletWeights,X(9),X(9)*X(8)))
 
       ! Combining
-    gradI = gradI - (thetaPlus-thetaMinus)/(h*pdf)
+    gradI = gradI - (thetaPlus-thetaMinus)/(h*probability)
   end function
 
   real*8 function gradR(X,y)
@@ -224,16 +226,16 @@ contains
     real*8 :: X(:),y(:)
     real*8,dimension(2) :: z
     real*8 :: thetaI
-    real*8 :: pdf
+    real*8 :: probability
     real*8 :: PIPlus,PIMinus
     real*8 :: h = 0.001D0
 
     thetaI = X(4)
 
-    ! Original pdf
+    ! Original probability
     z(1) = X(6)
     z(2) = X(7)
-    pdf = pdfTruncatedNormal(z,thetaI)
+    probability = pdfTruncatedNormal(z,thetaI)
 
     ! Central finite difference
     z(1) = z(1) + h*0.5D0
@@ -241,23 +243,23 @@ contains
     z(1) = z(1) - h
     PIMinus = pdfTruncatedNormal(z,thetaI)
 
-    gradPI = -(PIPLus-PIMinus)/(h*pdf)
+    gradPI = -(PIPLus-PIMinus)/(h*probability)
   end function
 
   real*8 function gradPT(X,y)
     real*8 :: X(:),y(:)
     real*8,dimension(2) :: z
     real*8 :: thetaI
-    real*8 :: pdf
+    real*8 :: probability
     real*8 :: PTPlus,PTMinus
     real*8 :: h = 0.001D0
 
     thetaI = X(4)
 
-    ! Original pdf
+    ! Original probability
     z(1) = X(6)
     z(2) = X(7)
-    pdf = pdfTruncatedNormal(z,thetaI)
+    probability = pdfTruncatedNormal(z,thetaI)
 
     ! Central finite difference
     z(2) = z(2) + h*0.5D0
@@ -265,7 +267,7 @@ contains
     z(2) = z(2) - h
     PTMinus = pdfTruncatedNormal(z,thetaI)
 
-    gradPT = -(PTPLus-PTMinus)/(h*pdf)
+    gradPT = -(PTPLus-PTMinus)/(h*probability)
   end function
 
   real*8 function gradRho(X,y)
@@ -281,12 +283,112 @@ contains
   subroutine gradTheta(X,y,gradX)
     real*8,intent(in) :: X(:),y(:)
     real*8,intent(out) :: gradX(:)
+    integer :: t
+    real*8 :: thetaS,thetaI,thetaR
+    real*8 :: lambda, gammaLambda
+    real*8 :: gammaThetaPlus
+    real*8 :: gammaThetaMinus
+    real*8 :: ONE = 1.0D0
+    real*8 :: TWO = 2.0D0
+    real*8 :: g,h,der_g,der_h
+    real*8 :: kappa,gammaKappa
+    real*8,dimension(3) :: alpha
+    real*8 :: beta
+    real*8,dimension(3) :: theta
+    real*8 :: dirichletPlus,dirichletMinus
+    integer :: ifault
 
+    kappa = X(1)
+    lambda = X(2)
+    gammaLambda = GAMMA(lambda)
+    gammaKappa = GAMMA(kappa)
+    gradX = 0
+
+    do t = 1,size(y)
+      !Beta distribution for observed variables
+      thetaS = X(10 + 3*(t-1))
+      thetaI = X(11 + 3*(t-1))
+      thetaR = X(12 + 3*(t-1))
+      gammaThetaPlus = GAMMA(lambda*thetaI)
+      gammaThetaMinus = GAMMA(lambda*(ONE-thetaI))
+
+
+      probability = pdfBeta(y(t),lambda*thetaI,lambda*(ONE-thetaI))
+
+      g = y(t)**(lambda*thetaI)*(ONE-y(t))**(lambda*(ONE-thetaI))*gammaLambda
+      h = gammaThetaPlus*gammaThetaMinus
+
+      der_g = (log(y(t))-log(ONE-y(t)))*lambda &
+      * y(t)**(lambda*thetaI)*(ONE-y(t))**(lambda*(ONE-y(t)))
+      der_h = (digamma(lambda*thetaI,ifault) - digamma(lambda*(ONE-thetaI),ifault)) &
+      * lambda*gammaThetaPlus*gammaThetaMinus
+
+      gradX(11 + 3*(t-1)) = gradX(11 + 3*(t-1)) - (der_g*h-der_h*g)/(probability*h**2)
+
+      ! Dirichlet distribution for new theta values
+      probability = pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),kappa*alpha)
+      select case(t)
+      case(1)
+        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),X(9),X(8)*X(9))
+      end select
+
+      probability = pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),kappa*alpha)
+      beta = GAMMA(alpha(1))*GAMMA(alpha(2))*GAMMA(alpha(3))/gammaKappa
+
+      gradX(10 + 3*(t-1)) = gradX(10 + 3*(t-1)) - (alpha(1)-ONE)*thetaS**(alpha(1)-TWO) &
+                      *thetaI**(alpha(2)-ONE)*thetaR**(alpha(3)-ONE)/(probability*beta)
+      gradX(11 + 3*(t-1)) = gradX(11 + 3*(t-1)) - (alpha(2)-ONE)*thetaI**(alpha(2)-TWO) &
+                      *thetaS**(alpha(1)-ONE)*thetaR**(alpha(3)-ONE)/(probability*beta)
+      gradX(12 + 3*(t-1)) = gradX(12 + 3*(t-1)) - (alpha(3)-ONE)*thetaR**(alpha(3)-TWO) &
+                      *thetaS**(alpha(1)-ONE)*thetaI**(alpha(2)-ONE)/(probability*beta)
+    enddo
+
+    ! Derivative for old theta values
+    do t = 1,size(y)-1
+      h = 0.001D0
+      theta = X(10 + 3*(t-1):12 + 3*(t-1))
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      probability = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      ! theta S
+      theta(1) = theta(1) + 0.5D0*h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      theta(1) = theta(1) - h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      gradX(10 + 3*(t-1)) = gradX(10+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+
+      ! theta I
+      theta = X(10 + 3*(t-1):12 + 3*(t-1))
+
+      theta(2) = theta(2) + 0.5D0*h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      theta(2) = theta(2) - h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      gradX(11 + 3*(t-1)) = gradX(11+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+
+      ! theta R
+      theta = X(10 + 3*(t-1):12 + 3*(t-1))
+
+      theta(3) = theta(3) + 0.5D0*h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      theta(3) = theta(3) - h
+      alpha = rkvec(theta,X(9),X(8)*X(9))
+      thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
+
+      gradX(12 + 3*(t-1)) = gradX(12+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+    enddo
   end subroutine
-
-
-
-
-
 
 end module

@@ -1,5 +1,7 @@
 module Pdf
+  USE PRECISION_MODEL
   use MVSTAT
+
   implicit none
 
 contains
@@ -50,6 +52,8 @@ contains
     real*8 :: abs_error, rel_error
     real*8 :: error
     integer :: nevals,inform
+    integer :: N = 2
+    integer :: nu = 0
 
     real*8,dimension(2) :: mu
     real*8,dimension(2) :: upper
@@ -81,7 +85,7 @@ contains
     lower(2) = 1.0D0
 
     ! Calculating partition function for truncated distribution
-    CALL MVDIST(2,COVRNC,0,2,lower,CONSTR,upper,INFIN,mu,1000*2,abs_error,rel_error, &
+    CALL MVDIST(2,COVRNC,0,2,lower,CONSTR,upper,INFIN,mu,1000*2,abs_error,0E0_STND, &
     error, partition, nevals,inform)
 
     if (inform/=0) THEN
