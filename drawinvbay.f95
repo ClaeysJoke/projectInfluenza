@@ -8,10 +8,16 @@ PROGRAM drawinvbay
   integer :: N
   real*8, dimension(:), allocatable :: array_kappa
   integer :: nr_values, i 
-  real*8 :: normal, PI, PT
+  real*8 :: normal, PI, PT, mean
   real*8, dimension(17) :: X_beta, tau
   real*8, dimension(1,2) :: z
-  
+  mean = 0.0
+
+	open(unit = 5, file='I0.txt')
+	open(unit = 7, file='kappa.txt')
+	open(unit = 8, file='lambda.txt')
+	open(unit = 9, file='R0.txt')
+
 
   nr_values = 10
   allocate(array_kappa(nr_values))
@@ -27,31 +33,58 @@ PROGRAM drawinvbay
   sigma = reshape((/0.000036, -0.0187, -0.0187, 16.09/), shape(sigma))
   SigmaInv = reshape((/70093.66, 81.46373,81.46373, 0.1568285/), shape(SigmaInv))
   
-  kappa = rand_gamma(2.0_8,0.0001_8)
+  do i=1,5000
+  kappa = rand_gamma(real(2.0,8),real(10000.0,8))
+  write(7,*) kappa
   !print*,kappa
+  enddo
+  close(7)
 
-
-  lambda = rand_gamma(2.0_8,0.0001_8)
+  do i=1,5000
+  lambda = rand_gamma(real(2.0,8),real(10000.0,8))
+  write(8,*) lambda
   !print*,lambda
+  mean = mean + lambda
+  enddo
+  close(8)
+
+  mean = mean/5000.0
+  print*,mean
+
   S0 = 0.9
 
+  do i=1,5000
   I0 = rand_beta(1.62_8,7084.10_8) !these values by fitting a beta distribution to historical ILI+ for t=0
   !print*,I0
-  R0 = 1-S0-I0
+  write(5,*) I0
+  enddo
+  close(5)
+
+  open(unit=5,file='I0.txt')
+  do i=1,5000
+  read(5,*) I0
+  R0 = 1-0.9-I0
+  write(9,*) R0
+  enddo
+  close(5)
+  close(9)
   
-  lower(1) = I0
-  b(1) = upper(1)
-  b(2) = upper(2)
-  b(3) = -lower(1)
-  b(4) = -lower(2)
+  !lower(1) = I0
+  !b(1) = upper(1)
+  !b(2) = upper(2)
+  !b(3) = -lower(1)
+  !b(4) = -lower(2)
+
   
   N=1 !how many samples do you want
   
-  rows_A = SIZE(A,1)
-  columns_A = SIZE(A,2)
-  rows_b = SIZE(b,1)
+  !vanaf hier niet meer loopen, gwn in 1 keer, geen init_seed meer nodig
 
-  z = accept_reject(I0)
+  !rows_A = SIZE(A,1)
+  !columns_A = SIZE(A,2)
+  !rows_b = SIZE(b,1)
+
+  call accept_reject
   !print *,z(1,1)
   !print *,z(1,2)
 
@@ -60,54 +93,77 @@ PROGRAM drawinvbay
   !PI = z(1)
   !PT = z(2)  
 
-  !rho = calculate_rho(10,I0,S0,PI)
+  call calculate_rho(10)
 
-  X_beta(1) = 1
-  X_beta(2) = log(PT)
-  X_beta(3) = (log(PT))**2
-  X_beta(4) = log(I0)
-  X_beta(5) = (log(I0))**2
-  X_beta(6) = log(rho)
-  X_beta(7) = (log(rho))**2
-  X_beta(8) = (log(rho))**3
-  X_beta(9) = (log(rho))**4
-  X_beta(10) = log(I0)*log(rho)
-  X_beta(11) = ((log(I0))**2)*log(rho)
-  X_beta(12) = log(I0)*((log(rho))**2)
-  X_beta(13) = ((log(I0))**2)*((log(rho))**2)
-  X_beta(14) = log(I0)*((log(rho))**3)
-  X_beta(15) = ((log(I0))**2)*((log(rho))**3)
-  X_beta(16) = log(I0)*((log(rho))**4)
-  X_beta(17) = ((log(I0))**2)*((log(rho))**4)
 
-tau(1) = -49.7540
-tau(2) = -0.9577
-tau(3) = -0.0065
-tau(4) = -9.4896
-tau(5) = -0.3761
-tau(6) = -590.0001
-tau(7) = -2537.6102
-tau(8) = -4756.1828
-tau(9) = -3265.2458
-tau(10) = -102.2665
-tau(11) = -4.0162
-tau(12) = -430.9596
-tau(13) = -16.7104
-tau(14) = -798.3443
-tau(15) = -30.6638
-tau(16) = -543.8857
-tau(17) = -20.7459
 
-  !beta = EXP(dot_product(X_beta,tau) + 0.5*(0.0421**2))
+
+  call calc_betas !writes the betavalues to beta, requires truncated_normal.txt, rho.txt, I0.txt
+
+
 contains
 
-!OK
+subroutine calc_betas
+	implicit none
+	real*8, dimension(17) :: X_beta, tau
+	real*8 :: rho, I0
+	tau(1) = -49.7540
+	tau(2) = -0.9577
+	tau(3) = -0.0065
+	tau(4) = -9.4896
+	tau(5) = -0.3761
+	tau(6) = -590.0001
+	tau(7) = -2537.6102
+	tau(8) = -4756.1828
+	tau(9) = -3265.2458
+	tau(10) = -102.2665
+	tau(11) = -4.0162
+	tau(12) = -430.9596
+	tau(13) = -16.7104
+	tau(14) = -798.3443
+	tau(15) = -30.6638
+	tau(16) = -543.8857
+	tau(17) = -20.7459
+	open(unit = 2, file='truncated_normal.txt')
+	open(unit = 3, file='betas.txt')
+	open(unit = 4, file='rho.txt')
+	open(unit = 5, file='I0.txt')
+		do i=1,5000
+			READ(2,*) PI ,PT
+			read(4,*) rho
+			read(5,*) I0
+			X_beta(1) = 1
+  			X_beta(2) = log(PT)
+  			X_beta(3) = (log(PT))**2
+  			X_beta(4) = log(I0)
+  			X_beta(5) = (log(I0))**2
+  			X_beta(6) = log(rho)
+  			X_beta(7) = (log(rho))**2
+  			X_beta(8) = (log(rho))**3
+  			X_beta(9) = (log(rho))**4
+  			X_beta(10) = log(I0)*log(rho)
+  			X_beta(11) = ((log(I0))**2)*log(rho)
+  			X_beta(12) = log(I0)*((log(rho))**2)
+  			X_beta(13) = ((log(I0))**2)*((log(rho))**2)
+  			X_beta(14) = log(I0)*((log(rho))**3)
+  			X_beta(15) = ((log(I0))**2)*((log(rho))**3)
+  			X_beta(16) = log(I0)*((log(rho))**4)
+  			X_beta(17) = ((log(I0))**2)*((log(rho))**4)
+			beta = EXP(dot_product(X_beta,tau) + 0.5*(0.0421**2))
+			write(3,*) beta
+		enddo
+	close(2)
+	close(3)
+	close(4)
+	close(5)
+end subroutine
+
 RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
 	implicit none
-	real*8 :: ans
-	real*8, intent(in) :: shape, scale
-      	real*8 :: u,w,d,c,x,xsq,g,v
-      IF (shape <= 0.0) THEN
+	real (kind=selected_real_kind(8) ) :: ans
+	real (kind=selected_real_kind(8) ), intent(in) :: shape, scale !shape and scale
+     	real (kind=selected_real_kind(8) ) :: u,w,d,c,x,xsq,g,v
+     IF (shape <= 0.0) THEN
 
         WRITE(*,*) "Shape PARAMETER must be positive"
       END IF
@@ -164,27 +220,36 @@ FUNCTION rand_beta(a, b) RESULT(ans)
        ans = u / (u + v)
 END FUNCTION
 
-FUNCTION accept_reject(lb1) RESULT (z)
+subroutine accept_reject
 	implicit none
 	real*8, dimension(1,2) :: z
 	real*8 :: lb1,PI,PT
-	integer :: succeed,i
+	integer :: succeed,i,j
 	succeed = 0
-	i=0
-	OPEN(1,FILE='normal_02_00100.txt') !you become this by running normal_distribution.f95
-    		do while ((i .LT. 100) .AND. (succeed .EQ. 0))
-    			READ(1,*) PI ,PT
-			print*,PI
-			print*,PT
-    			IF ((PI.LT.1) .AND. (PI.GT.lb1) .AND. (PT.LT.35) .AND. (PT.GT.1)) THEN
-    				succeed = 1
-			ENDIF
-			i = i + 1
+	i=1
+	j=1
+	OPEN(unit=1,FILE='normal_02_15000.txt') !you become this by running normal_distribution.f95
+	open(unit = 2, file='truncated_normal.txt')
+	open(unit=5, file='I0.txt')
+    		do while (i .LT. 5001) !opgelet j mag niet terug naar nul worden gezet, want je leest de j-de lijn van de 15000 lijnen
+			
+			read(5, *) lb1
+			succeed = 0
+			do while ((j .LT. 15001) .AND. (succeed .EQ. 0))
+    				READ(1,*) PI ,PT
+				!print *,PI
+    				IF ((PI.LT.1) .AND. (PI.GT.lb1) .AND. (PT.LT.35) .AND. (PT.GT.1)) THEN
+					write(2,*) PI, PT
+					succeed = 1
+				ENDIF
+			j = j + 1
+			enddo
+		i = i+1
     		enddo
    	CLOSE(1)
-	z(1,1) = PI
-	z(1,2) = PT
-END FUNCTION
+	close(2)
+	close(5)
+END subroutine
 
 !OK
 FUNCTION rand_truncated_normal(mu,sigma,SigmaInv,Nbig,Atemp,btemp) RESULT(r) !MULTIVARIATE
@@ -461,33 +526,42 @@ RECURSIVE FUNCTION TruncatedGaussian(sigma,range) RESULT(X)
 	
 END FUNCTION
 
-function calculate_rho(m,I0,S0,PI) result(sol)
+subroutine calculate_rho(m)
       real*8 :: a,b
-      real*8, intent(in) :: I0,S0,PI
+      real*8 :: I0,S0,PI
       integer, intent(in) :: m
-      real :: fa, fb, temp, sol
-      integer :: n
+      real*8 :: fa, fb, temp, sol
+      integer :: n,i
       interface
       function f(x)
-      real, intent(in) :: x
+      real*8, intent(in) :: x
       end function f
       end interface
-	a = -10
-	b = 10
 
-      fa = evaluate_g_inverse(a,I0,S0,PI)
-      fb = evaluate_g_inverse(b,I0,S0,PI)
-      if (abs(fa) >  abs(fb)) then
-         temp = a
-         a = b
-         b = temp
-         temp = fa
-         fa = fb
-         fb = temp
-      end if
-      print *,"    n        x(n)         f(x(n))"
-      print *," 1 ", b, fb
-      print *," 0 ", a, fa	
+	open(unit=1,file='I0.txt')
+	open(unit = 2, file='truncated_normal.txt')
+	open(unit = 9, file='rho.txt')
+do i=1,5000
+	!print*,i
+	a = 0.2
+	b = 20
+	read(1,*) I0
+	read(2,*) PI,PT
+	!print*,i
+	S0 = 0.9
+        fa = evaluate_g_inverse(a,I0,S0,PI)
+        fb = evaluate_g_inverse(b,I0,S0,PI)
+        if (abs(fa) >  abs(fb)) then
+          temp = a
+          a = b
+          b = temp
+          temp = fa
+          fa = fb
+          fb = temp
+        end if
+      !print *,"    n        x(n)         f(x(n))"
+      !print *," 1 ", b, fb
+      !print *," 0 ", a, fa	
       do n = 2,m
          if (abs(fa) >  abs(fb)) then
             temp = a
@@ -505,12 +579,19 @@ function calculate_rho(m,I0,S0,PI) result(sol)
          !print *,n,a,fa
       end do  
 	sol = a 
-      end function calculate_rho
+	!print*,i
+	write(9,*) sol
+enddo
+	close(1)
+	close(2)
+	close(9)
+end subroutine
 
 function evaluate_g_inverse(x,I0,S0,PI) result(fx)
 	real*8,intent(in) :: x,I0,S0,PI
 	fx = I0 + S0 - PI - x*(log(S0) + 1 - log(x))
 end function
+
 
 SUBROUTINE init_random_seed()
             INTEGER :: i, n, clock,clock2
