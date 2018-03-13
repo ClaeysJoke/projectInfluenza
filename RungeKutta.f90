@@ -1,6 +1,7 @@
 
 
 
+
 !******************************************************************
 !			PART ONE: SOLVERS
 !				
@@ -180,6 +181,7 @@ theta=(1.0/s)*theta
 end subroutine drawDirichlet
 
 
+
 RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
 	implicit none
 	real (kind=selected_real_kind(8) ) :: ans
@@ -228,18 +230,22 @@ END FUNCTION
 
 
 SUBROUTINE init_random_seed()
-            INTEGER :: i, n, clock
+            INTEGER :: i, n, clock,clock2
             INTEGER, DIMENSION(:), ALLOCATABLE :: seed
-          
+            real	:: y
             CALL RANDOM_SEED(size = n)
             ALLOCATE(seed(n))
           
             CALL SYSTEM_CLOCK(COUNT=clock)
-          
+	    clock2=clock
             seed = clock + 37 * (/ (i - 1, i = 1, n) /)
             CALL RANDOM_SEED(PUT = seed)
           
             DEALLOCATE(seed)
+	    
+	    do while(clock .eq. clock2)
+		CALL SYSTEM_CLOCK(COUNT=clock2)
+	    end do
 END SUBROUTINE
 
 FUNCTION rand_beta(a, b) RESULT(ans)
@@ -287,7 +293,13 @@ end module
 !******************************************************************
 !Feed this subroutine the estimated parameters (beta, gamma, kappa, lambda) and the 
 !number of iterates K
+module DBSSM_MOD
+
+
+contains
+
 subroutine DBSSM(K,dt, t0, beta,gamm,kappa,lambda,theta0,theta,y)
+
 use RANDOM
 use DIFF_SOLVER
 use DIFF
@@ -297,8 +309,8 @@ real ( kind=selected_real_kind(8) ), intent (inout):: theta(3,K), y(K),theta0(3)
 real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
 integer 					   :: seed,clock,count_rate,count_max,i,K
 
- call init_random_seed()
- call rk4vec(3, t0, theta0, dt, fvec, theta(1,1),beta,gamm)
+call init_random_seed()
+call rk4vec(3, t0, theta0, dt, fvec, theta(1,1),beta,gamm)
  y(1)=rand_beta(lambda*theta(2,1), lambda*(1-theta(2,1)))
 do i=2,K
  call init_random_seed()
@@ -319,22 +331,59 @@ real ( kind=selected_real_kind(8) ), intent (in)   :: theta0(3)
 real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,K)
 real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
 integer 					   :: seed,clock,count_rate,count_max,i,K
-
+ y_and_theta=0.0
  call init_random_seed()
  call rk4vec(3, t0, theta0, dt, fvec, y_and_theta(1:3,1),beta,gamm)
- y_and_theta(4,1)=rand_beta(lambda*y_and_theta(2,1), lambda*(1-y_and_theta(2,1)))
+ !print *, y_and_theta(2,1)
+ y_and_theta(4,1)=rand_beta(lambda*y_and_theta(2,1), lambda*(1.0-y_and_theta(2,1)))
+ !print *, y_and_theta
 do i=2,K
  call init_random_seed()
  call rk4vec(3, t0, y_and_theta(1:3,i-1), dt, fvec, y_and_theta(1:3,i),beta,gamm)
  call drawDirichlet(3, kappa*y_and_theta(1:3,i),y_and_theta(1:3,i))
  y_and_theta(4,i)=rand_beta(lambda*y_and_theta(2,i), lambda*(1-y_and_theta(2,i)))
 end do
+i=1
 end function
 
-
+end module
 
 program main
-print *, "test to be performed"
+
+use DBSSM_MOD
+use random
+real ( kind=selected_real_kind(8) )   :: dt,t0,s
+real ( kind=selected_real_kind(8) )   :: theta0(3)
+real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,10),x
+real ( kind=selected_real_kind(8) )   :: beta,gamm,kappa, lambda
+integer 	:: seed,clock,count_rate,count_max,i,K,j
+t0=0.0
+s=0.0
+dt=1.0
+beta=2.0
+gamm=1.4
+lambda=2000
+kappa=1.0
+theta0(1)=0.9
+theta0(2)=0.0002
+theta0(3)=0.0998
+j=0
+!do i=1,100
+!y_and_theta=DBSSM_FUNC(10,dt, t0, beta,gamm,kappa,lambda,theta0)
+!print *,i, "Y IS: ",y_and_theta(4,:)
+!if( sqrt(y_and_theta(2,10)*(1.0-y_and_theta(2,10))/(1.0+lambda))- abs(y_and_theta(4,10)-y_and_theta(2,10))<0) then
+!j=j+1
+!end if
+!end do
+do i=1,1000
+x=rand_gamma(real(2.0,8),real(10000.0,8))
+print *, x
+end do
+
+!print *, "OUTSIDE OF ST. DEV. ", j, " OUT OF 100 TIMES"
+!do i=1,100
+!print *, rand_beta(real(0.0003,8)*lambda,lambda*0.9997)
+!end do
+!print*, y_and_theta
+!print *, "test performed"
 end program
-
-
