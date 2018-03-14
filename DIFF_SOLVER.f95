@@ -118,4 +118,22 @@ subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   return
 end subroutine
+
+	subroutine f (t,u,uprime)
+	real (kind=selected_real_kind(8) ) :: u
+	real (kind=selected_real_kind(8) ) :: t
+	real (kind=selected_real_kind(8) ) :: uprime
+	uprime = 3.0*t**2
+	end subroutine f
+	!VECTORIAL VERSION OF DIFFERENTIAL EQUATION
+	subroutine fvec (m,t,u,uprime, beta, gamm)
+		integer :: m
+		real (kind=selected_real_kind(8) ) :: u(m), uprime(m)
+		real (kind=selected_real_kind(8) ) :: t
+		real (kind=selected_real_kind(8) ) :: beta,gamm
+		uprime(1) = -1*beta*u(1)*u(2)
+		uprime(2) = beta*u(1)*u(2)-gamm*u(2)
+		uprime(3) = gamm*u(2)
+	end subroutine fvec
+
 end module

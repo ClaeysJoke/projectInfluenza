@@ -11,10 +11,10 @@ contains
     integer,intent(in) :: t
     integer :: week,i
     real*8 :: ILI,ILI_prop,ILI_pos,ILI_plus
-    open(1,'data_week.txt')
+    open(7,file='data_week.txt')
 
     do i = 1,t
-      read(1,*) week,ILI,ILI_prop,ILI_pos,ILI_plus
+      read(7,*) week,ILI,ILI_prop,ILI_pos,ILI_plus
       y(i) = ILI_plus
     enddo
 

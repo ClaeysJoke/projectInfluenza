@@ -2,6 +2,7 @@ module GradientModule
   use Pdf
   use PsiModule
   use ODE
+  use GetModule
 
   real*8 :: delta = 0.001D0
 
@@ -179,7 +180,7 @@ contains
     real*8 :: betaPlus,betaMinus,rhoPlus,rhoMinus
     real*8 :: logPlus,logMinus
     integer :: t
-    real*8,dimension(3) :: alpha
+    real*8,dimension(3) :: alpha_dirichlet
 
     I = X(4)
 
@@ -232,12 +233,12 @@ contains
 
       select case(t)
       case(1)
-        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+        alpha_dirichlet = rkvec(X(3:5),X(9),X(8)*X(9))
       case default
-        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaPlus,betaPlus*rhoPlus)
+        alpha_dirichlet = rkvec(X(10+3*(t-2):9+3*(t-1)),betaPlus,betaPlus*rhoPlus)
       end select
 
-      thetaPlus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+      thetaPlus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha_dirichlet))
 
       ! Minus delta
       X(4) = X(4) - delta
@@ -248,12 +249,12 @@ contains
 
       select case(t)
       case(1)
-        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+        alpha_dirichlet = rkvec(X(3:5),X(9),X(8)*X(9))
       case default
-        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaMinus,betaMinus*rhoMinus)
+        alpha_dirichlet = rkvec(X(10+3*(t-2):9+3*(t-1)),betaMinus,betaMinus*rhoMinus)
       end select
 
-      thetaMinus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+      thetaMinus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha_dirichlet))
 
       gradI = gradI + (thetaPlus-thetaMinus)/delta
     enddo
@@ -271,10 +272,10 @@ contains
     real*8 :: thetaI
     real*8 :: probability
     real*8 :: PIPlus,PIMinus
-    integer :: i
     real*8 :: rhoPlus,betaPlus,rhoMinus,betaMinus
     real*8 :: thetaPlus,thetaMinus
     real*8,dimension(3) :: alpha
+    integer :: t
 
     thetaI = X(4)
 
@@ -325,7 +326,7 @@ contains
 
       thetaMinus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
 
-      gradI = gradI + (thetaPlus-thetaMinus)/delta
+      gradPI = gradPI + (thetaPlus-thetaMinus)/delta
     enddo
     X(6) = X(6) + 0.5D0*delta
   end function

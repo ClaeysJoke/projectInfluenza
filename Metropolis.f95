@@ -1,6 +1,7 @@
 program Metropolis
   use Sampling
   use Reading
+  use Prior
   implicit none
 
   integer :: t !Timewindow in weeks
@@ -16,12 +17,12 @@ program Metropolis
   integer :: nbComponents
   integer :: nbTries
 
-  open(1,"BurnIn.txt")
-  open(2,"Samples.txt")
+  open(1,file="BurnIn.txt")
+  open(2,file="Samples.txt")
 
-  burnIn = 200
+  burnIn = 50
   sampleRate = 1
-  nbSamples = 500
+  nbSamples = 200
   t = 5
   dt = 1
 
@@ -31,11 +32,15 @@ program Metropolis
   allocate(X(nbComponents), gradX(nbComponents))
 
   ! Read y from data
+  print *, "Reading data until week", t
   call readData(y,t)
 
   ! Initialize parameter vectors
+  print *, "Sampling Prior"
   call SamplePrior(X,y)
+  print *, "Computing initial gradient"
   call Gradient(X,y,gradX)
+  print *, "Computing initial posterior distribution"
   call Posterior(X,y,pdfX)
 
   ! MCMC Burn-in
