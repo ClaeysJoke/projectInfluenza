@@ -94,7 +94,7 @@ contains
       return
     ENDIF
 
-    if ((X(1)<lower(1)).and.(X(1)>upper(1)).and.(X(2)<lower(2)).and.(X(2)>upper(2))) THEN
+    if ((X(1)<lower(1)).or.(X(1)>upper(1)).or.(X(2)<lower(2)).or.(X(2)>upper(2))) THEN
       pdfTruncatedNormal = 0
     ENDIF
 
