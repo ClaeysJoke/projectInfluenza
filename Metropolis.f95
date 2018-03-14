@@ -24,7 +24,7 @@ program Metropolis
   sampleRate = 1
   nbSamples = 200
   t = 5
-  dt = 1
+  dt = 0.1D0
 
   allocate(y(t))
   allocate(theta(3*t))
@@ -41,26 +41,30 @@ program Metropolis
   print *, "Computing initial gradient"
   call Gradient(X,y,gradX)
   print *, "Computing initial posterior distribution"
-  call Posterior(X,y,pdfX)
-
-  ! MCMC Burn-in
-  do count = 1, burnIn
-    ! Generate new sample during burn-in
-    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
-    write(1,*) count,pdfX,nbTries
-    print *, "Burn-in sample",count
-  enddo
-  count = 1
-  ! Generate real samples
-  do count = 1, nbSamples
-    !Generate samples
-    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
-    if (MODULO(count,sampleRate)==0)then
-      write(2,*) count,pdfX,nbTries
-      print *, "Sampling number",count
-    endif
-  enddo
-
-  deallocate(y,theta,X,gradX)
+  call LogPosterior(X,y,pdfX)
+  print *, "Posterior equals ", pdfX
 
 end program
+
+!  ! MCMC Burn-in
+!  print *, "================== Burn-in start ====================="
+!  do count = 1, burnIn
+!    ! Generate new sample during burn-in
+!    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
+!    write(1,*) count,pdfX,nbTries
+!    print *, "Burn-in sample",count
+!  enddo
+!  count = 1
+!  ! Generate real samples
+!  do count = 1, nbSamples
+!    !Generate samples
+!    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
+!    if (MODULO(count,sampleRate)==0)then
+!      write(2,*) count,pdfX,nbTries
+!      print *, "Sampling number",count
+!    endif
+!  enddo
+!
+!  deallocate(y,theta,X,gradX)
+
+!end program

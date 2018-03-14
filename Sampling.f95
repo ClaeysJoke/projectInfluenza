@@ -22,11 +22,15 @@ contains
 
     allocate(trialX(size(X)),gradTrialX(size(gradX)))
     nbTries = 0
+    print *, "================= Generating Sample ====================="
     do !Loop until acceptable sample is generated
+      print *, "================ Trial ", nbTries, " ============"
     ! Generate trial
       call GenerateTrial(X,gradX,dt,trialX)
     ! Calculate probability of the new trial, if p=0, skip entire loop.
-      call Posterior(trialX, y, pdfTrialX)
+      call LogPosterior(trialX, y, pdfTrialX)
+
+      print *, "LogPosterior density", pdfTrialX
 
       if (pdfTrialX > 0) then
 
@@ -89,15 +93,15 @@ contains
     allocate(mu(size(X)))
     mu = destination - (X-gradX*dt)
 
-    Transition = EXP(-0.5*(sqrt(2*dt)**(-1)*DOT_PRODUCT(destination-mu,destination-mu))) &
-    /(sqrt((2*PI)**size(X)*sqrt(2*dt)**size(X)))
+    Transition = EXP(-0.5*(DOT_PRODUCT(destination-mu,destination-mu)/(2*dt))) &
+    /(sqrt((2*PI)**size(X)*(2*dt)**size(X)))
 
     deallocate(mu)
   end function
 
   ! Calculates posterior pdf for a given parameter vector X
   ! Assumes fixed values of X to still be fixed
-  subroutine Posterior(X,y,pdfX)
+  subroutine LogPosterior(X,y,pdfX)
     real*8, intent(in) :: X(:),y(:)
     real*8, intent(out) :: pdfX
     real*8 :: prior, simulation, ILI
@@ -106,15 +110,20 @@ contains
     real*8,dimension(3) :: dirichletWeights
 
     ! Initialize to zero
-    prior = 1
-    simulation = 1
-    ILI = 1
+    print *, "------------- Sampling Posterior --------------"
+    prior = 0.0D0
+    simulation = 0.0D0
+    ILI = 0.0D0
 
     ! Prior pdf
-    prior = prior*pdfGamma(X(1))
-    prior = prior*pdfGamma(X(2))
-    prior = prior*pdfBeta(X(4),1.62D0,7084.1D0)
-    prior = prior*pdfTruncatedNormal(X(6:7),X(4))
+    prior = prior + log(pdfGamma(X(1)))
+    print *, "log p(kappa) ", prior
+    prior = prior + log(pdfGamma(X(2)))
+    print *, "log p(kappa)*p(lambda) ", prior
+    prior = prior + log(pdfBeta(X(4),1.62D0,7084.1D0))
+    print *, "log p(kappa)*p(lambda)*p(theta) ", prior
+    prior = prior + log(pdfTruncatedNormal(X(6:7),X(4)))
+    print *, "log p(kappa)*p(lambda)*p(theta)*p(z|theta) ", prior
 
     ! ILI and simulation pdf
     do i = 1,size(y)
@@ -133,5 +142,5 @@ contains
     pdfX = prior*ILI*simulation
 
   end subroutine
-  
+
 end module

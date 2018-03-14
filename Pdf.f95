@@ -30,8 +30,8 @@ contains
     real*8 :: x,alpha,beta
     real*8 :: betaFunction
 
-    if ((x>0) .and. (x<1)) then
-      betaFunction = DGAMMA(alpha)*DGAMMA(beta)/DGAMMA(alpha+beta)
+    if ((x>0.0D0) .and. (x<1.0D0)) then
+      betaFunction = GAMMA(alpha)*GAMMA(beta)/GAMMA(alpha+beta)
       pdfBeta = x**(alpha-1)*(1-x)**(beta-1)/betaFunction
     else
       pdfBeta = 0

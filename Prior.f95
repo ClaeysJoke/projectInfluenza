@@ -41,10 +41,11 @@ contains
 
 
     ! "Sample" rho
-    print *, "Sampling prior Rho"
+    print *, "Sampling Prior Rho"
+    X(8) = 1.0D0
     X(8) = getRho(X)
     ! "Sample" beta
-    print *, "Sampling prior Beta"
+    print *, "Sampling Prior Beta"
     X(9) = getBeta(X)
     ! "Sample" thetas, by putting them equal to theta0
     print *, "Sampling thetas"
