@@ -14,11 +14,16 @@ program Metropolis
   integer :: burnIn, sampleRate, nbSamples
   real*8 :: dt
   integer :: nbComponents
+  integer :: nbTries
 
-  burnIn = 5
+  open(1,"BurnIn.txt")
+  open(2,"Samples.txt")
+
+  burnIn = 200
   sampleRate = 1
-  nbSamples = 50
+  nbSamples = 500
   t = 5
+  dt = 1
 
   allocate(y(t))
   allocate(theta(3*t))
@@ -29,24 +34,25 @@ program Metropolis
   call readData(y,t)
 
   ! Initialize parameter vectors
-  call SamplePrior(X)
+  call SamplePrior(X,y)
   call Gradient(X,y,gradX)
   call Posterior(X,y,pdfX)
 
   ! MCMC Burn-in
   do count = 1, burnIn
     ! Generate new sample during burn-in
-    call GenerateSample(X,gradX,pdfX,y,dt)
-    print *, "Burn-in"
+    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
+    write(1,*) count,pdfX,nbTries
+    print *, "Burn-in sample",count
   enddo
   count = 1
   ! Generate real samples
   do count = 1, nbSamples
     !Generate samples
-    call GenerateSample(X,gradX,pdfX,y,dt)
+    call GenerateSample(X,gradX,pdfX,y,dt,nbTries)
     if (MODULO(count,sampleRate)==0)then
-      !Write to file, print out, ....
-      print *, count
+      write(2,*) count,pdfX,nbTries
+      print *, "Sampling number",count
     endif
   enddo
 

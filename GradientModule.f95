@@ -3,6 +3,8 @@ module GradientModule
   use PsiModule
   use ODE
 
+  real*8 :: delta = 0.001D0
+
 contains
   ! Computes the gradient of the potential function V w.r.t. the parameter
   ! vector and the hidden variables
@@ -171,10 +173,13 @@ contains
     real*8 :: I
     real*8 :: ONE = 1.0D0
     real*8 :: TWO = 2.0D0
-    real*8 :: h = 0.001D0
     real*8,dimension(2) :: z
     real*8,dimension(3) :: dirichletWeights
     real*8 :: thetaPlus,thetaMinus
+    real*8 :: betaPlus,betaMinus,rhoPlus,rhoMinus
+    real*8 :: logPlus,logMinus
+    integer :: t
+    real*8,dimension(3) :: alpha
 
     I = X(4)
 
@@ -194,8 +199,8 @@ contains
 
     probability = pdfTruncatedNormal(z,I)
 
-    gradI = gradI - (pdfTruncatedNormal(z,I+0.5D0*h) - pdfTruncatedNormal(z,I-0.5D0*h)) &
-    /(h*probability)
+    gradI = gradI - (pdfTruncatedNormal(z,I+0.5D0*delta) - pdfTruncatedNormal(z,I-0.5D0*delta)) &
+    /(delta*probability)
 
     ! Derivative w.r.t update step theta0 => theta1
     probability = pdfDirichlet(X(10:12),X(1)*rkvec(X(3:5),X(9),X(9)*X(8)))
@@ -214,7 +219,45 @@ contains
     thetaMinus = pdfDirichlet(X(10:12),X(1)*rkvec(dirichletWeights,X(9),X(9)*X(8)))
 
       ! Combining
-    gradI = gradI - (thetaPlus-thetaMinus)/(h*probability)
+    gradI = gradI - (thetaPlus-thetaMinus)/(delta*probability)
+
+    ! Derivative through rho and beta on update steps, fully numerical
+    do t = 1,size(y)
+      ! Plus delta
+      X(4) = X(4) + 0.5D0*delta
+
+      rhoPlus = getRho(X)
+      betaPlus = getBeta(X)
+
+
+      select case(t)
+      case(1)
+        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaPlus,betaPlus*rhoPlus)
+      end select
+
+      thetaPlus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+
+      ! Minus delta
+      X(4) = X(4) - delta
+
+      rhoMinus = getRho(X)
+      betaMinus = getBeta(X)
+
+
+      select case(t)
+      case(1)
+        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaMinus,betaMinus*rhoMinus)
+      end select
+
+      thetaMinus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+
+      gradI = gradI + (thetaPlus-thetaMinus)/delta
+    enddo
+    X(4) = X(4) + 0.5D0*delta
   end function
 
   real*8 function gradR(X,y)
@@ -228,7 +271,10 @@ contains
     real*8 :: thetaI
     real*8 :: probability
     real*8 :: PIPlus,PIMinus
-    real*8 :: h = 0.001D0
+    integer :: i
+    real*8 :: rhoPlus,betaPlus,rhoMinus,betaMinus
+    real*8 :: thetaPlus,thetaMinus
+    real*8,dimension(3) :: alpha
 
     thetaI = X(4)
 
@@ -238,12 +284,50 @@ contains
     probability = pdfTruncatedNormal(z,thetaI)
 
     ! Central finite difference
-    z(1) = z(1) + h*0.5D0
+    z(1) = z(1) + delta*0.5D0
     PIPLus = pdfTruncatedNormal(z,thetaI)
-    z(1) = z(1) - h
+    z(1) = z(1) - delta
     PIMinus = pdfTruncatedNormal(z,thetaI)
 
-    gradPI = -(PIPLus-PIMinus)/(h*probability)
+    gradPI = -(PIPLus-PIMinus)/(delta*probability)
+
+    ! Derivative through rho and beta on update steps, fully numerical
+    do t = 1,size(y)
+      ! Plus delta
+      X(6) = X(6) + 0.5D0*delta
+
+      rhoPlus = getRho(X)
+      betaPlus = getBeta(X)
+
+
+      select case(t)
+      case(1)
+        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaPlus,betaPlus*rhoPlus)
+      end select
+
+      thetaPlus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+
+      ! Minus delta
+      X(6) = X(6) - delta
+
+      rhoMinus = getRho(X)
+      betaMinus = getBeta(X)
+
+
+      select case(t)
+      case(1)
+        alpha = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        alpha = rkvec(X(10+3*(t-2):9+3*(t-1)),betaMinus,betaMinus*rhoMinus)
+      end select
+
+      thetaMinus = -log(pdfDirichlet(X(10 + 3*(t-1):12 + 3*(t-1)),X(1)*alpha))
+
+      gradI = gradI + (thetaPlus-thetaMinus)/delta
+    enddo
+    X(6) = X(6) + 0.5D0*delta
   end function
 
   real*8 function gradPT(X,y)
@@ -252,7 +336,7 @@ contains
     real*8 :: thetaI
     real*8 :: probability
     real*8 :: PTPlus,PTMinus
-    real*8 :: h = 0.001D0
+
 
     thetaI = X(4)
 
@@ -262,12 +346,12 @@ contains
     probability = pdfTruncatedNormal(z,thetaI)
 
     ! Central finite difference
-    z(2) = z(2) + h*0.5D0
+    z(2) = z(2) + delta*0.5D0
     PTPLus = pdfTruncatedNormal(z,thetaI)
-    z(2) = z(2) - h
+    z(2) = z(2) - delta
     PTMinus = pdfTruncatedNormal(z,thetaI)
 
-    gradPT = -(PTPLus-PTMinus)/(h*probability)
+    gradPT = -(PTPLus-PTMinus)/(delta*probability)
   end function
 
   real*8 function gradRho(X,y)
@@ -347,47 +431,46 @@ contains
 
     ! Derivative for old theta values
     do t = 1,size(y)-1
-      h = 0.001D0
       theta = X(10 + 3*(t-1):12 + 3*(t-1))
       alpha = rkvec(theta,X(9),X(8)*X(9))
       probability = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
       ! theta S
-      theta(1) = theta(1) + 0.5D0*h
+      theta(1) = theta(1) + 0.5D0*delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      theta(1) = theta(1) - h
+      theta(1) = theta(1) - delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      gradX(10 + 3*(t-1)) = gradX(10+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+      gradX(10 + 3*(t-1)) = gradX(10+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*delta)
 
       ! theta I
       theta = X(10 + 3*(t-1):12 + 3*(t-1))
 
-      theta(2) = theta(2) + 0.5D0*h
+      theta(2) = theta(2) + 0.5D0*delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      theta(2) = theta(2) - h
+      theta(2) = theta(2) - delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      gradX(11 + 3*(t-1)) = gradX(11+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+      gradX(11 + 3*(t-1)) = gradX(11+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*delta)
 
       ! theta R
       theta = X(10 + 3*(t-1):12 + 3*(t-1))
 
-      theta(3) = theta(3) + 0.5D0*h
+      theta(3) = theta(3) + 0.5D0*delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaPlus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      theta(3) = theta(3) - h
+      theta(3) = theta(3) - delta
       alpha = rkvec(theta,X(9),X(8)*X(9))
       thetaMinus = pdfDirichlet(X(10 + 3*t:12 + 3*t),kappa*alpha)
 
-      gradX(12 + 3*(t-1)) = gradX(12+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*h)
+      gradX(12 + 3*(t-1)) = gradX(12+3*(t-1)) - (thetaPlus-thetaMinus)/(probability*delta)
     enddo
   end subroutine
 

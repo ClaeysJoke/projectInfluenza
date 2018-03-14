@@ -7,18 +7,20 @@ module Sampling
   real*8,parameter :: PI = 4*ATAN(1.0_8)
 
 contains
-  subroutine GenerateSample(X,gradX,pdfX,y,dt)
+  subroutine GenerateSample(X,gradX,pdfX,y,dt,nbTries)
     real*8, intent(inout) :: X(:), gradX(:), pdfX
     real*8, intent(in) :: y(:)
     real*8, intent(in) :: dt
+    integer*8,intent(out) :: nbTries
     real*8, allocatable :: trialX(:),gradTrialX(:)
+
 
     real*8 :: fromTrial, toTrial
     real*8 :: U
     real*8 :: pdfTrialX
 
     allocate(trialX(size(X)),gradTrialX(size(gradX)))
-
+    nbTries = 0
     do !Loop until acceptable sample is generated
     ! Generate trial
       call GenerateTrial(X,gradX,dt,trialX)
@@ -46,6 +48,7 @@ contains
           exit
         endif
       endif
+      nbTries = nbTries + 1
     enddo
 
     deallocate(trialX,gradTrialX)
@@ -142,7 +145,7 @@ contains
     ! Newton-Raphson loop
     do
       func = I0 + S0 - PI - rho*(log(S0)+1.0D0-log(rho))
-      if (abs(func)<100*EPSILON(func)) then
+      if (abs(func)<1000*EPSILON(func)) then
         getRho = rho
         return
       endif

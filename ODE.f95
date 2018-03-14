@@ -1,5 +1,7 @@
 module ODE
 
+  use
+
 contains
   function rkvec(theta,beta,gamma)
     real*8, dimension(3) :: theta
@@ -7,8 +9,9 @@ contains
 
     real*8,dimension(3) :: rkvec
 
-    ! DUMMY FUNCTION
     rkvec = theta
+
+
 
   end function
 
