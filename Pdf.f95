@@ -31,7 +31,7 @@ contains
     real*8 :: betaFunction
 
     if ((x>0.0D0) .and. (x<1.0D0)) then
-      betaFunction = GAMMA(alpha)*GAMMA(beta)/GAMMA(alpha+beta)
+      betaFunction = DGAMMA(alpha)*DGAMMA(beta)/DGAMMA(alpha+beta)
       pdfBeta = x**(alpha-1)*(1-x)**(beta-1)/betaFunction
     else
       pdfBeta = 0
@@ -99,7 +99,7 @@ contains
     ENDIF
 
     pdfTruncatedNormal = EXP(-((X(1)-mu(1))**2/s_X**2 + (X(2)-mu(2))**2/s_Y**2) &
-    - 2*rho*(X(1)-mu(1))*(X(2)-mu(2))/(s_X*s_Y))/(2*(1-rho**2))
+    - 2*rho*(X(1)-mu(1))*(X(2)-mu(2))/(s_X*s_Y))/(2*(1-rho**2))/partition
   end function
 
 
@@ -115,7 +115,7 @@ contains
     if ((zero<X(1)).and.(X(1)<one).and.(zero<X(2)).and.(X(2)<one).and. &
     (zero<X(3)).and.(X(3)<one).and.((one-X(1)-X(2)-X(3))<(100.0D0*EPSILON(X(1))))) then
 
-      beta = PRODUCT(GAMMA(alpha))/GAMMA(SUM(alpha))
+      beta = PRODUCT(DGAMMA(alpha))/DGAMMA(SUM(alpha))
 
       pdfDirichlet = X(1)**(alpha(1)-1)*X(2)**(alpha(2)-1)*X(3)**(alpha(3)-1)/beta
 
