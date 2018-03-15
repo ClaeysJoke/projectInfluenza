@@ -40,6 +40,10 @@ program Metropolis
   call SamplePrior(X,y)
   print *, "Computing initial gradient"
   call Gradient(X,y,gradX)
+
+
+
+
   print *, "Computing initial posterior distribution"
   call LogPosterior(X,y,pdfX)
   print *, "Posterior equals ", pdfX

@@ -1,6 +1,7 @@
 module Pdf
   USE PRECISION_MODEL
   use MVSTAT
+  real*8,parameter :: PI = 4*ATAN(1.0_8)
 
   implicit none
 
@@ -99,7 +100,7 @@ contains
     ENDIF
 
     pdfTruncatedNormal = EXP(-((X(1)-mu(1))**2/s_X**2 + (X(2)-mu(2))**2/s_Y**2) &
-    - 2*rho*(X(1)-mu(1))*(X(2)-mu(2))/(s_X*s_Y))/(2*(1-rho**2))/partition
+    - 2*rho*(X(1)-mu(1))*(X(2)-mu(2))/(s_X*s_Y))/(2*PI*sqrt((1-rho**2)))/partition
   end function
 
 

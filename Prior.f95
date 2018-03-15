@@ -29,8 +29,7 @@ contains
     X(3) = 0.9D0
     ! Sample I0
     print *, "Sampling Prior I0"
-    X(4) = 0.001D0
-    !X(4) = rand_beta(alpha,beta)
+    X(4) = rand_beta(alpha,beta)
     ! "Sample" R0
     print *, "Sampling Prior R0"
     X(5) = 1.0D0 - X(3) - X(4)
