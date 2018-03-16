@@ -13,7 +13,7 @@ contains
     ! Newton-Raphson loop
     do
       func = I0 + S0 - PI - rho*(log(S0)+1.0D0-log(rho))
-      if (abs(func)<1000*EPSILON(func)) then
+      if (abs(func)<100000*EPSILON(func)) then
         getRho = rho
         return
       endif

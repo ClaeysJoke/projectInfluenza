@@ -1,6 +1,7 @@
 module Prior
   use Sampling
   use Normal
+  use ODE
 
 contains
 
@@ -9,7 +10,6 @@ contains
     integer :: i
     real*8 :: shape,rate
     real*8 :: alpha,beta
-    real*8,dimension(3) :: theta
 
     shape = 2.0D0
     rate = 0.0001D0
@@ -19,44 +19,48 @@ contains
 
     ! Sample Kappa
     print *, "============ PRIOR ================="
-    print *, "Sampling Prior kappa"
+
     X(1) = rand_gamma(shape,1.0D0/rate)
     ! Sample Lambda
-    print *, "Sampling Prior Lambda"
+
     X(2) = rand_gamma(shape,1.0D0/rate)
     ! "Sample" S0
-    print *, "Sampling Prior S0"
+
     X(3) = 0.9D0
     ! Sample I0
-    print *, "Sampling Prior I0"
-    X(4) = rand_beta(alpha,beta)
+    ! randGamma is still giving shitty values :'(
+
+    X(4) = 0.005D0
+
+
     ! "Sample" R0
-    print *, "Sampling Prior R0"
+
     X(5) = 1.0D0 - X(3) - X(4)
 
     ! "Sample" PI and PT
-    print *, "Sampling Prior PI and PT"
+
     X(6) = 0.0144D0
     X(7) = 17.9D0
 
 
     ! "Sample" rho
-    print *, "Sampling Prior Rho"
+
     X(8) = 1.0D0
     X(8) = getRho(X)
     ! "Sample" beta
-    print *, "Sampling Prior Beta"
+
     X(9) = getBeta(X)
-    ! "Sample" thetas, by putting them equal to theta0
-    print *, "Sampling thetas"
-    theta(1) = X(3)
-    theta(2) = X(4)
-    theta(3) = X(5)
+    ! "Sample" thetas, by simulating them with the ODE solver from theta0
+
 
     do i = 1,size(y)
-      X(10+3*(i-1)) = 0.9D0
-      X(11+3*(i-1)) = y(i)
-      X(12+3*(i-1)) = 1 - y(i) - 0.9D0
+      select case(i)
+      case(1)
+        X(10:12) = rkvec(X(3:5),X(9),X(8)*X(9))
+      case default
+        X(10+3*(i-1):12+3*(i-1)) = rkvec(X(10+3*(i-2):12+3*(i-2)),X(9),X(8)*X(9))
+      end select
+
     enddo
 
   end subroutine

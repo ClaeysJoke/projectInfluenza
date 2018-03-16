@@ -5,7 +5,7 @@ module Sampling
   use ODE
   use GetModule
   implicit none
-  real*8,parameter :: PI = 4*ATAN(1.0_8)
+
 
 contains
   subroutine GenerateSample(X,gradX,pdfX,y,dt,nbTries)
@@ -46,7 +46,7 @@ contains
         toTrial = Transition(X,gradX,dt,trialX)
 
     ! Accept reject
-        if (U <= pdfTrialX*fromTrial/(pdfX*toTrial)) then
+        if (log(U) <= pdfTrialX + log(fromTrial) - pdfX -log(toTrial)) then
           X = trialX
           gradX = gradTrialX
           pdfX = pdfTrialX
@@ -116,30 +116,58 @@ contains
     ILI = 0.0D0
 
     ! Prior pdf
-    prior = prior + log(pdfGamma(X(1)))
-    print *, "log p(kappa) ", prior
-    prior = prior + log(pdfGamma(X(2)))
-    print *, "log p(kappa)*p(lambda) ", prior
-    prior = prior + log(pdfBeta(X(4),1.62D0,7084.1D0))
-    print *, "log p(kappa)*p(lambda)*p(theta) ", prior
-    prior = prior + log(pdfTruncatedNormal(X(6:7),X(4)))
-    print *, "log p(kappa)*p(lambda)*p(theta)*p(z|theta) ", prior
+    prior = prior + logPdfGamma(X(1))
+    print *, "log p(X1)", prior
+    prior = prior + logPdfGamma(X(2))
+    if (prior > -huge(0.0D0)) then
+      print *, "log p(X1)*p(X2)",prior
+      prior = prior + logPdfBeta(X(4),1.62D0,7084.1D0)
+      print *, "log p(X1)*p(X2)*p(theta)",prior
+      if (prior > -huge(0.0D0)) then
+        prior = prior + logTruncatedNormal(X(6:7),X(4))
+        print *, "log p(X1)*p(X2)*p(theta)*p(z)",prior
+        if (prior > -huge(0.0D0)) then
 
     ! ILI and simulation pdf
-    do i = 1,size(y)
-      thetaI = X(11 + 3*(i-1))
-      ILI = ILI*pdfBeta(y(i),X(2)*thetaI,X(2)*(1.0D0-thetaI))
-      select case (i)
-      case(1)
-        dirichletWeights = rkvec(X(3:5),X(9),X(8)*X(9))
-        simulation = simulation*pdfDirichlet(X(10:12),X(1)*dirichletWeights)
-      case default
-        dirichletWeights = rkvec(X(10+3*(i-1):9+3*i),X(9),X(8)*X(9))
-        simulation = simulation*pdfDirichlet(X(10+3*i:12+3*i),X(1)*dirichletWeights)
-      end select
-    enddo
+          do i = 1,size(y)
 
-    pdfX = prior*ILI*simulation
+            thetaI = X(11 + 3*(i-1))
+
+            ILI = ILI + logPdfBeta(y(i),X(2)*thetaI,X(2)*(1.0D0-thetaI))
+            print *, "ILI log odds", ILI
+            if (ILI < - huge(0.0D0)) then
+              exit
+            endif
+            select case (i)
+            case(1)
+
+              dirichletWeights = rkvec(X(3:5),X(9),X(8)*X(9))
+
+              simulation = simulation + logPdfDirichlet(X(10:12),X(1)*dirichletWeights)
+              print *, "Simulation log odds", simulation
+              if (simulation < - huge(0.0D0)) then
+                exit
+              endif
+            case default
+              dirichletWeights = rkvec(X(10+3*(i-2):12+3*(i-2)),X(9),X(8)*X(9))
+
+              simulation = simulation + logPdfDirichlet(X(10+3*(i-1):12+3*(i-1)),X(1)*dirichletWeights)
+              print *, "Simulation log odds", simulation
+              if (simulation < - huge(0.0D0)) then
+                exit
+              endif
+            end select
+          enddo
+        endif
+      endif
+    endif
+
+    if ((prior + ILI < -huge(0.0D0)) .OR. (prior + simulation < -huge(0.0D0)) &
+    .OR. (ILI + simulation < -huge(0.0D0))) then
+      pdfX = -huge(0.0D0)
+    else
+      pdfX = prior+ILI+simulation
+    endif
 
   end subroutine
 
