@@ -475,4 +475,30 @@ contains
     enddo
   end subroutine
 
+  ! Computes the gradient of the potential function V w.r.t. the parameter
+  ! vector and the hidden variables using finite difference with step h, order 1
+  subroutine GradientFinite(X,y,pdfX,gradX)
+    real*8,intent(in) :: X(:),y(:)
+    real*8,intent(out) :: gradX(:)
+    real*8,intent(in) :: pdfX
+    integer :: i
+    real*8, allocatable :: gradientStep(:)
+    real*8 :: gradientPdf
+
+    allocate(gradientStep(size(X)))
+
+    do i = 1,size(gradX)
+
+      gradientStep = 0.0D0
+      gradientStep(i) = delta
+      call LogPosterior(X+gradientStep,y,gradientPdf)
+      gradX(i) = (-gradientPdf-(-pdfX))/delta
+
+    end do
+
+    deallocate(gradientStep)
+
+  end subroutine
+
+
 end module

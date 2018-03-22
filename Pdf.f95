@@ -1,12 +1,85 @@
 module Pdf
   USE PRECISION_MODEL
   use MVSTAT
+  use ODE
 
 
   implicit none
   real*8,parameter :: PI = 4*ATAN(1.0_8)
 
 contains
+  ! Calculates posterior pdf for a given parameter vector X
+  ! Assumes fixed values of X to still be fixed
+  subroutine LogPosterior(X,y,pdfX)
+    real*8, intent(in) :: X(:),y(:)
+    real*8, intent(out) :: pdfX
+    real*8 :: prior, simulation, ILI
+    integer :: i
+    real*8 :: thetaI
+    real*8,dimension(3) :: dirichletWeights
+
+    ! Initialize to zero
+    !print *, "------------- Sampling Posterior --------------"
+    prior = 0.0D0
+    simulation = 0.0D0
+    ILI = 0.0D0
+
+    ! Prior pdf
+    prior = prior + logPdfGamma(X(1))
+    !print *, "log p(X1)", prior
+    prior = prior + logPdfGamma(X(2))
+    if (prior > -huge(0.0D0)) then
+      !print *, "log p(X1)*p(X2)",prior
+      prior = prior + logPdfBeta(X(4),1.62D0,7084.1D0)
+      !print *, "log p(X1)*p(X2)*p(theta)",prior
+      if (prior > -huge(0.0D0)) then
+        prior = prior + logTruncatedNormal(X(6:7),X(4))
+        !print *, "log p(X1)*p(X2)*p(theta)*p(z)",prior
+        if (prior > -huge(0.0D0)) then
+
+    ! ILI and simulation pdf
+          do i = 1,size(y)
+
+            thetaI = X(11 + 3*(i-1))
+
+            ILI = ILI + logPdfBeta(y(i),X(2)*thetaI,X(2)*(1.0D0-thetaI))
+            !print *, "ILI log odds", ILI
+            if (ILI < - huge(0.0D0)) then
+              exit
+            endif
+            select case (i)
+            case(1)
+
+              dirichletWeights = rkvec(X(3:5),X(9),X(8)*X(9))
+
+              simulation = simulation + logPdfDirichlet(X(10:12),X(1)*dirichletWeights)
+            !  print *, "Simulation log odds", simulation
+              if (simulation < - huge(0.0D0)) then
+                exit
+              endif
+            case default
+              dirichletWeights = rkvec(X(10+3*(i-2):12+3*(i-2)),X(9),X(8)*X(9))
+
+              simulation = simulation + logPdfDirichlet(X(10+3*(i-1):12+3*(i-1)),X(1)*dirichletWeights)
+            !  print *, "Simulation log odds", simulation
+              if (simulation < - huge(0.0D0)) then
+                exit
+              endif
+            end select
+          enddo
+        endif
+      endif
+    endif
+
+    if ((prior + ILI < -huge(0.0D0)) .OR. (prior + simulation < -huge(0.0D0)) &
+    .OR. (ILI + simulation < -huge(0.0D0))) then
+      pdfX = -huge(0.0D0)
+    else
+      pdfX = prior+ILI+simulation
+    endif
+
+  end subroutine
+
   ! Calculates the Gamma probablitiy density function of the scalar x.
   ! Gamma distribution has the following parameters:
   !   shape : alpha = 2.0
