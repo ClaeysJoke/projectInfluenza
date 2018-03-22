@@ -31,7 +31,7 @@ contains
     ! Sample I0
 
     ! randGamma is still giving shitty values :'(
-    X(4) = 0.01D0
+    X(4) = 0.00023D0
 
 
     ! "Sample" R0

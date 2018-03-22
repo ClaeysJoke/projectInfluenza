@@ -13,17 +13,16 @@ program Metropolis
   real*8 :: pdfX
   integer :: count
   integer :: burnIn, sampleRate, nbSamples
-  real*8 :: dt
   integer :: nbComponents
   integer :: nbTries
   integer :: i
 
-  open(1,file="BurnIn.txt")
-  open(2,file="Samples.txt")
+  open(unit=8,file="BurnIn.txt")
+  open(unit=9,file="Samples.txt")
 
-  burnIn = 50
+  burnIn = 5
   sampleRate = 1
-  nbSamples = 200
+  nbSamples = 0
   t = 5
 
   allocate(y(t))
@@ -57,7 +56,7 @@ program Metropolis
   do count = 1, burnIn
     ! Generate new sample during burn-in
     call GenerateSample(X,pdfX,y,nbTries)
-    write(1,*) count,pdfX,nbTries
+    write(8,*) "Burn in", count,pdfX,nbTries
     print *, "Burn-in sample",count
   enddo
   count = 1
@@ -66,7 +65,7 @@ program Metropolis
     !Generate samples
     call GenerateSample(X,pdfX,y,nbTries)
     if (MODULO(count,sampleRate)==0)then
-      write(2,*) count,pdfX,nbTries
+      write(9,*) count,pdfX,nbTries
       print *, "Sampling number",count
     endif
   enddo

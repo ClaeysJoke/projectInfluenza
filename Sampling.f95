@@ -6,6 +6,8 @@ module Sampling
   use GetModule
   implicit none
 
+  real*8 :: dt = 1
+  real*8 :: h = 0.001D0
 
 contains
   subroutine GenerateSample(X,pdfX,y,nbTries)
@@ -41,8 +43,8 @@ contains
 
     ! Call functions for accept reject
 
-        fromTrial =  Transition(trialX,X)
-        toTrial = Transition(X,trialX)
+        fromTrial =  Transition(trialX,X,y)
+        toTrial = Transition(X,trialX,y)
 
     ! Accept reject
         if (log(U) <= pdfTrialX + log(fromTrial) - pdfX -log(toTrial)) then
@@ -64,13 +66,12 @@ contains
     real*8, intent(in) :: y(:)
     real*8 :: pdfX
     integer :: i
-    real*8 :: h = 0.001D0
     real*8, allocatable :: gradientStep(:)
     real*8 :: pdfPlus,pdfMinus
-    real*8 :: dt = 0.5D0
     real*8 :: gradient
     real*8,allocatable :: X_placeholder(:)
     real*8,dimension(3) :: theta_estimate
+    real*8 :: variance
 !    real*8, allocatable :: xi(:)
     allocate(gradientStep(size(X)))
     allocate(X_placeholder(size(X)))
@@ -81,7 +82,7 @@ contains
       gradientStep(1) = 0.5*h
       call LogPosterior(X+gradientStep,y,pdfPlus)
       call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
-      trialX(1) = X(1) - (-pdfPlus+pdfMinus)/h + sqrt(dt)*rand_normal(0.0D0,1.0D0)
+      trialX(1) = X(1) - dt*(-pdfPlus+pdfMinus)/h + sqrt(2*dt)*rand_normal(0.0D0,1.0D0)
     ! Updating lambda
       ! Grad V of lambda
       print *, "Updating Lambda"
@@ -89,7 +90,7 @@ contains
       gradientStep(2) = 0.5*h
       call LogPosterior(X+gradientStep,y,pdfPlus)
       call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
-      trialX(2) = X(2) - (-pdfPlus+pdfMinus)/h + sqrt(dt)*rand_normal(0.0D0,1.0D0)
+      trialX(2) = X(2) - dt*(-pdfPlus+pdfMinus)/h + sqrt(2*dt)*rand_normal(0.0D0,1.0D0)
 
     ! Updating S0
     print *, "Updating S0"
@@ -101,8 +102,9 @@ contains
     gradientStep(4) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
-    gradient = (-pdfPlus+pdfMinus)/h/abs(-pdfPlus+pdfMinus)
-    trialX(4) = X(4) - 0.001*gradient + sqrt(0.001)*rand_normal(0.0D0,1.0D0)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    variance = 0.00018**2
+    trialX(4) = X(4) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(4) < tiny(0.0D0)) then
       trialX(4) = tiny(0.0D0)
     elseif (trialX(4) > 0.1D0) then
@@ -119,8 +121,9 @@ contains
     gradientStep(6) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
-    gradient = (-pdfPlus+pdfMinus)/h/abs(-pdfPlus+pdfMinus)
-    trialX(6) = X(6) - 0.001*gradient + sqrt(0.001)*rand_normal(0.0D0,1.0D0)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    variance = 0.000036D0
+    trialX(6) = X(6) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(6)<trialX(4)) then
       trialX(6) = trialX(4)
     elseif (trialX(6) > 1.0D0) then
@@ -133,8 +136,9 @@ contains
     gradientStep(7) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
-    gradient = (-pdfPlus+pdfMinus)/h/abs(-pdfPlus+pdfMinus)
-    trialX(7) = X(7) - 0.01*gradient + sqrt(0.01)*rand_normal(0.0D0,1.0D0)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    variance = 16.09
+    trialX(7) = X(7) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(7)<1.0D0) then
       trialX(7) = 1.0D0
     elseif (trialX(7) > 35.0D0) then
@@ -187,12 +191,73 @@ contains
     deallocate(X_placeholder)
   end subroutine
 
+  ! Transition distribution for phi vector (for starters)
+  real*8 function Transition(X,destination,y)
+    real*8 :: X(:),destination(:),y(:)
+    real*8 :: kappa
+    real*8 :: lambda
+    real*8 :: gradient
+    real*8 :: mu,sigma2
+    real*8 :: kappaTransition,lambdaTransition,I0Transition,PITransition,PTTransition
+    real*8 :: pdfPlus,pdfMinus
+    real*8,allocatable :: gradientStep(:)
 
-  real*8 function Transition(X,destination)
-    real*8 :: X(:),destination(:)
+    allocate(gradientStep(size(X)))
 
-    Transition = 0.5D0
+    ! Kappa
+    gradientStep = 0.0D0
+    gradientStep(1) = 0.5*h
+    call LogPosterior(X+gradientStep,y,pdfPlus)
+    call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+    mu =  X(1) - dt*(-pdfPlus+pdfMinus)/h
+    sigma2 = 2*dt
 
+    kappaTransition = exp(-(mu-destination(1))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    ! Lambda
+    gradientStep = 0.0D0
+    gradientStep(2) = 0.5*h
+    call LogPosterior(X+gradientStep,y,pdfPlus)
+    call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+    mu =  X(2) - dt*(-pdfPlus+pdfMinus)/h
+    sigma2 = 2*dt
+
+    kappaTransition = exp(-(mu-destination(2))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    ! I0
+    gradientStep = 0.0D0
+    gradientStep(4) = 0.5*h
+    call LogPosterior(X+gradientStep,y,pdfPlus)
+    call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    sigma2 = 0.00018**2
+    mu = X(4) - sqrt(sigma2)*gradient
+
+    I0Transition = exp(-(mu-destination(4))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    ! PI
+    gradientStep = 0.0D0
+    gradientStep(6) = 0.5*h
+    call LogPosterior(X+gradientStep,y,pdfPlus)
+    call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    sigma2 = 0.000036D0
+    mu = X(6) - sqrt(sigma2)*gradient
+
+    PITransition = exp(-(mu-destination(6))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    ! PT
+    gradientStep = 0.0D0
+    gradientStep(7) = 0.5*h
+    call LogPosterior(X+gradientStep,y,pdfPlus)
+    call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+    gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
+    sigma2 = 16.09
+    mu = X(7) - sqrt(sigma2)*gradient
+
+    PTTransition = exp(-(mu-destination(7))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    deallocate(gradientStep)
   end function
 
 end module
