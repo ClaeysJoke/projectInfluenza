@@ -6,7 +6,7 @@ module Sampling
   use GetModule
   implicit none
 
-  real*8 :: dt = 1
+  real*8 :: dt = 10.0D0
   real*8 :: h = 0.001D0
 
 contains
@@ -39,15 +39,21 @@ contains
         !call GradientFinite(trialX,y,pdfX,gradTrialX)
 
     ! Sample Uniform distribution for accept-reject
+    !call init_random_seed()
         call RANDOM_NUMBER(U)
 
     ! Call functions for accept reject
 
         fromTrial =  Transition(trialX,X,y)
         toTrial = Transition(X,trialX,y)
+        !print *, "Previous sample log pdf",pdfX
+        !print *, "Trial log pdf", pdfTrialX
+        !print *, "Transition from trial", fromTrial
+        !print *, "Transition to trial", toTrial
+        !print *, "Random number", U
 
     ! Accept reject
-        if (log(U) <= pdfTrialX + log(fromTrial) - pdfX -log(toTrial)) then
+        if (log(U) < (pdfTrialX + log(fromTrial) - pdfX -log(toTrial))) then
           X = trialX
 
           pdfX = pdfTrialX
@@ -76,34 +82,43 @@ contains
     allocate(gradientStep(size(X)))
     allocate(X_placeholder(size(X)))
     ! Updating kappa
-    print *, "Updating Kappa"
+    !print *, "Updating Kappa"
       ! Grad V of kappa
       gradientStep = 0.0D0
       gradientStep(1) = 0.5*h
       call LogPosterior(X+gradientStep,y,pdfPlus)
       call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+      !call init_random_seed()
       trialX(1) = X(1) - dt*(-pdfPlus+pdfMinus)/h + sqrt(2*dt)*rand_normal(0.0D0,1.0D0)
+      if (trialX(1)<tiny(trialX(1))) then
+        trialX(1) = tiny(trialX(1))
+      endif
     ! Updating lambda
       ! Grad V of lambda
-      print *, "Updating Lambda"
+      !print *, "Updating Lambda"
       gradientStep = 0.0D0
       gradientStep(2) = 0.5*h
       call LogPosterior(X+gradientStep,y,pdfPlus)
       call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
+      !call init_random_seed()
       trialX(2) = X(2) - dt*(-pdfPlus+pdfMinus)/h + sqrt(2*dt)*rand_normal(0.0D0,1.0D0)
+      if (trialX(2)<tiny(trialX(2))) then
+        trialX(2) = tiny(trialX(2))
+      endif
 
     ! Updating S0
-    print *, "Updating S0"
+    !print *, "Updating S0"
       trialX(3) = 0.9D0
 
     ! Updating I0
-    print *, "Updating I0"
+    !print *, "Updating I0"
     gradientStep = 0.0D0
     gradientStep(4) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 0.00018**2
+    !call init_random_seed()
     trialX(4) = X(4) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(4) < tiny(0.0D0)) then
       trialX(4) = tiny(0.0D0)
@@ -112,17 +127,18 @@ contains
     endif
 
     ! Updating R0
-    print *, "Updating R0"
+    !print *, "Updating R0"
       trialX(5) = 1.0D0 - trialX(3) - trialX(4)
 
     ! Updating PI
-    print *, "Updating PI"
+    !print *, "Updating PI"
     gradientStep = 0.0D0
     gradientStep(6) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 0.000036D0
+    !call init_random_seed()
     trialX(6) = X(6) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(6)<trialX(4)) then
       trialX(6) = trialX(4)
@@ -131,13 +147,14 @@ contains
     endif
 
     ! Updating PT
-    print *, "Updating PT"
+    !print *, "Updating PT"
     gradientStep = 0.0D0
     gradientStep(7) = 0.5*h
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 16.09
+    !call init_random_seed()
     trialX(7) = X(7) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(7)<1.0D0) then
       trialX(7) = 1.0D0
@@ -146,21 +163,24 @@ contains
     endif
 
     ! Updating rho
-    print *, "Updating Rho"
-      trialX(8) = getRhoIter(trialX)
+    !print *, "Updating Rho"
+      !trialX(8) = getRhoIter(trialX)
+      trialX(8) = getRho(trialX(3),trialX(4),trialX(6))
     ! Updating beta
-    print *, "Updating Beta"
+    !print *, "Updating Beta"
       trialX(9) = getBeta(trialX)
 
     ! Updating thetas
       do i = 1,size(y)
       select case(i)
       case(1)
-        print *,"Updating theta 1"
+        !print *,"Updating theta 1"
+        !call init_random_seed()
         call rand_Dirichlet(3,trialX(1)*rkvec(trialX(3:5),trialX(9),trialX(8)*trialX(9)),theta_estimate)
         trialX(10:12) = theta_estimate
       case default
-        print *, "Updating theta",i
+        !print *, "Updating theta",i
+        !call init_random_seed()
         call rand_Dirichlet(3,trialX(1)*rkvec(trialX(10+3*(i-2):12+3*(i-2)),trialX(9),trialX(8)*trialX(9)),theta_estimate)
         trialX(10+3*(i-1):12+3*(i-1)) = theta_estimate
       end select
@@ -222,7 +242,7 @@ contains
     mu =  X(2) - dt*(-pdfPlus+pdfMinus)/h
     sigma2 = 2*dt
 
-    kappaTransition = exp(-(mu-destination(2))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+    lambdaTransition = exp(-(mu-destination(2))**2/(2*sigma2))/sqrt(2*PI*sigma2)
 
     ! I0
     gradientStep = 0.0D0
@@ -256,6 +276,8 @@ contains
     mu = X(7) - sqrt(sigma2)*gradient
 
     PTTransition = exp(-(mu-destination(7))**2/(2*sigma2))/sqrt(2*PI*sigma2)
+
+    Transition = kappaTransition*lambdaTransition*I0Transition*PITransition*PTTransition
 
     deallocate(gradientStep)
   end function

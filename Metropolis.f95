@@ -17,13 +17,13 @@ program Metropolis
   integer :: nbTries
   integer :: i
 
-  open(unit=8,file="BurnIn.txt")
-  open(unit=9,file="Samples.txt")
+  open(unit=8,file='/Users/Nick/Documents/2eMaster/Project/Code/projectInfluenza/BurnIn.txt')
+  open(unit=9,file='/Users/Nick/Documents/2eMaster/Project/Code/projectInfluenza/Samples.txt')
 
-  burnIn = 5
+  burnIn = 5000
   sampleRate = 1
-  nbSamples = 0
-  t = 5
+  nbSamples = 10000
+  t = 10
 
   allocate(y(t))
   allocate(theta(3*t))
@@ -52,11 +52,12 @@ program Metropolis
 
 
   ! MCMC Burn-in
-  print *, "================== Burn-in start ====================="
+ print *, "================== Burn-in start ====================="
   do count = 1, burnIn
     ! Generate new sample during burn-in
     call GenerateSample(X,pdfX,y,nbTries)
-    write(8,*) "Burn in", count,pdfX,nbTries
+    !write(8,*) count,pdfX,nbTries
+    write(8,*) X(1),X(2),pdfX,nbTries
     print *, "Burn-in sample",count
   enddo
   count = 1
@@ -65,11 +66,12 @@ program Metropolis
     !Generate samples
     call GenerateSample(X,pdfX,y,nbTries)
     if (MODULO(count,sampleRate)==0)then
-      write(9,*) count,pdfX,nbTries
+      !write(9,*) count,pdfX,nbTries
+      write(9,*) X(1),X(2),X(3),X(4),X(5),X(6),X(7),X(8),X(9)
       print *, "Sampling number",count
     endif
   enddo
-!
+
   deallocate(y,theta,X)
 
 end program

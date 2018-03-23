@@ -227,7 +227,7 @@ contains
       ! Plus delta
       X(4) = X(4) + 0.5D0*delta
 
-      rhoPlus = getRho(X)
+      rhoPlus = getRho(X(3),X(4),X(6))
       betaPlus = getBeta(X)
 
 
@@ -243,7 +243,7 @@ contains
       ! Minus delta
       X(4) = X(4) - delta
 
-      rhoMinus = getRho(X)
+      rhoMinus = getRho(X(3),X(4),X(6))
       betaMinus = getBeta(X)
 
 
@@ -297,7 +297,7 @@ contains
       ! Plus delta
       X(6) = X(6) + 0.5D0*delta
 
-      rhoPlus = getRho(X)
+      rhoPlus = getRho(X(3),X(4),X(6))
       betaPlus = getBeta(X)
 
 
@@ -313,7 +313,7 @@ contains
       ! Minus delta
       X(6) = X(6) - delta
 
-      rhoMinus = getRho(X)
+      rhoMinus = getRho(X(3),X(4),X(6))
       betaMinus = getBeta(X)
 
 

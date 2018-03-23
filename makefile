@@ -38,10 +38,10 @@ Pdf.o:./Pdf.f95 MVSTAT.o ODE.o
 GradientModule.o:./GradientModule.f95 PsiModule.o GetModule.o Pdf.o ODE.o
 	$(F90) -O3 -c ./GradientModule.f95
 
-Sampling.o:./Sampling.f95 GradientModule.o ODE.o Normal.o Random.o
+Sampling.o:./Sampling.f95 GradientModule.o ODE.o Normal.o Random.o GetModule.o
 	$(F90) -O3 -c ./Sampling.f95
 
-Prior.o:./Prior.f95 Sampling.o Normal.o ODE.o Random.o
+Prior.o:./Prior.f95 Sampling.o Normal.o ODE.o Random.o GetModule.o
 	$(F90) -O3 -c ./Prior.f95
 
 Metropolis.o:./Metropolis.f95 Sampling.o Prior.o Reading.o

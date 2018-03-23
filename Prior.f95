@@ -3,11 +3,13 @@ module Prior
   use Sampling
   use Normal
   use ODE
+  use GetModule
 
 contains
 
   subroutine SamplePrior(X,y)
-    real*8 :: X(:),y(:)
+    real*8,intent(inout) :: X(:)
+    real*8,intent(in) :: y(:)
     integer :: i
     real*8 :: shape,rate
     real*8 :: alpha,beta
@@ -16,6 +18,7 @@ contains
     rate = 0.0001D0
     alpha = 1.62D0
     beta = 7084.1D0
+    open(unit=10,file='/Users/Nick/Documents/2eMaster/Project/Code/projectInfluenza/Prior.txt')
 
 
     ! Sample Kappa
@@ -46,7 +49,9 @@ contains
 
     ! "Sample" rho
 
-    X(8) = getRhoIter(X)
+    !X(8) = getRhoIter(X)
+    X(8) = getRho(X(3),X(4),X(6))
+    !X(8) = 0.7D0
     ! "Sample" beta
 
     X(9) = getBeta(X)
@@ -62,7 +67,8 @@ contains
       end select
 
     enddo
-
+    write(10,*) X(8),X(9),X(10),X(11),X(12),X(13),X(14),X(15)
+    !print *, "rho is",X(8)
   end subroutine
 
 

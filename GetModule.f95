@@ -52,60 +52,60 @@ contains
 
   end function
 
-  real*8 function getRho(X)
-        real*8 :: a,b
-        real*8 :: I0,S0,PI
-        real*8, intent(in) :: X(:)
-        real*8 :: fa, fb, temp, sol
-        integer :: n,i
-        integer :: m = 100
+  real*8 function getRho(S0,I0,PI)
+        real*8 :: x1,x2
+        real*8,intent(in) :: I0,S0,PI
+        !real*8, intent(in) :: X(:)
+        real*8 :: f1, f2, temp, sol
+        integer :: n
+        integer :: m = 10
 
 
   	!print*,i
-  	a = 0.01
-  	b = 100
-  	I0 = X(4)
-  	PI = X(6)
-    PT = X(7)
-  	!print*,i
-  	S0 = X(3)
-          fa = evaluate_g_inverse(a,I0,S0,PI)
-          fb = evaluate_g_inverse(b,I0,S0,PI)
-          if (abs(fa) >  abs(fb)) then
-            temp = a
-            a = b
-            b = temp
-            temp = fa
-            fa = fb
-            fb = temp
-          end if
+  	x2 = 0.6D0
+  	x1 = 0.8D0
+
+          f2 = evaluate_g_inverse(x2,I0,S0,PI)
+          !print *, "Function value left bound",fa
+          f1 = evaluate_g_inverse(x1,I0,S0,PI)
+          !print *, "Function value right bound",fb
+        !  print *, "===== Iteration 1 ======"
+        !   print *,"n-2 point",x2
+        !   print *, "Function value n-2",f2
+        !   print *,"n-1 point",x1
+        !   print *, "Function value n-1",f1
+
         !print *,"    n        x(n)         f(x(n))"
         !print *," 1 ", b, fb
         !print *," 0 ", a, fa
         do n = 2,m
-           if (abs(fa) >  abs(fb)) then
-              temp = a
-              a = b
-              b = temp
-              temp = fa
-              fa = fb
-              fb = temp
-           end if
-           temp = (b - a)/(fb - fa)
-    	 b = a
-  	 fb = fa
-           a = a - fa*temp
-           fa = evaluate_g_inverse(a,I0,S0,PI)
+        !  print *, "===== Iteration",n," ======"
+        !   print *,"n-2 point",x2
+        !   print *, "Function value n-2",f2
+        !   print *,"n-1 point",x1
+        !   print *, "Function value n-1",f1
+           temp = (x1 - x2)/(f1 - f2)
+    	 x2 = x1
+  	 f2 = f1
+           x1 = x1 - f1*temp
+           if (x1<tiny(x1)) then
+             x1 = tiny(x1)
+           endif
+           f1 = evaluate_g_inverse(x1,I0,S0,PI)
+           if (abs(x1-x2)<1000*epsilon(x1)) then
+             exit
+           endif
            !print *,n,a,fa
         end do
-  	getRho = a
+  	getRho = x1
 
   end function
 
 
-  function evaluate_g_inverse(x,I0,S0,PI) result(fx)
+  real*8 function evaluate_g_inverse(x,I0,S0,PI)
   	real*8,intent(in) :: x,I0,S0,PI
-  	fx = I0 + S0 - PI - x*(log(S0) + 1 - log(x))
+
+  	evaluate_g_inverse = I0 + S0 - PI - x*(log(S0) + 1 - log(x))
   end function
 
 
@@ -122,10 +122,10 @@ contains
     ! Initial value close to 0
     rho = 0.1D0
 
-    g = PI + 0.1D0 - rho*(log(0.1D0-I)+1.0D0-log(rho))
+    g = -PI + I + 0.9D0 - rho*(log(0.9D0)+1.0D0-log(rho))
 
-    do while (abs(g)<1000*EPSILON(g))
-      der_g = -log(0.1D0-I) + log(rho)
+    do while (abs(g)>0.01D0)
+      der_g = -log(0.9D0) + log(rho)
       der2_g = 1.0D0/rho
 
       rho = rho - g*der_g/(der_g**2-0.5D0*g*der2_g)
@@ -134,7 +134,7 @@ contains
         rho = tiny(rho)
       endif
 
-      g = PI + 0.1D0 - rho*(log(0.1D0-I)+1.0D0-log(rho))
+      g = PI + I + 0.9D0 - rho*(log(0.9D0)+1.0D0-log(rho))
 
     enddo
 
