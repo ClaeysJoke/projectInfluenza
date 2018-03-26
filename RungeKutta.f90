@@ -47,7 +47,10 @@ real (kind=selected_real_kind(8) ) :: beta,gamm
 end subroutine fvec
 end interface
 
-call fvec(m,t0,u0,f0,beta,gamm)
+!call fvec(m,t0,u0,f0,beta,gamm)
+  f0(1) = -1*beta*u0(1)*u0(2)
+  f0(2) = beta*u0(1)*u0(2)-gamm*u0(2)
+  f0(3) = gamm*u0(2)
 u(1:m)=u0(1:m)+dt*f0(1:m)
 
 end subroutine
@@ -91,7 +94,7 @@ subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   real ( kind=selected_real_kind(8) ) :: dt,f0(m),f1(m),f2(m),f3(m)
   real ( kind=selected_real_kind(8) ) :: t0,t1,t2,t3
-  real ( kind=selected_real_kind(8) ) :: u(m),u0(m),u1(m),u2(m),u3(m)
+  real ( kind=selected_real_kind(8) ) :: u(m),u0(m),u1(m),u2(m),u3(m),uprime(3)
   real ( kind=selected_real_kind(8) ) :: beta,gamm
 
   interface
@@ -103,17 +106,29 @@ subroutine rk4Vec (m, t0, u0, dt, fvec, u,beta,gamm)
 
   end interface  
 
+  !f0(1) = -1*beta*u0(1)*u0(2)
+  !f0(2) = beta*u0(1)*u0(2)-gamm*u0(2)
+  !f0(3) = gamm*u0(2)
   call fvec (m, t0, u0, f0,beta,gamm )
 
   t1 = t0 + 0.5*dt
   u1(1:m) = u0(1:m) + 0.5*dt * f0(1:m)
   call fvec (m, t1, u1, f1 ,beta,gamm)
+  !f1(1) = -1*beta*u1(1)*u1(2)
+  !f1(2) = beta*u1(1)*u1(2)-gamm*u1(2)
+  !f1(3) = gamm*u1(2)
   u2(1:m) = u0(1:m) + 0.5*dt * f1(1:m)
   call fvec (m, t1, u2, f2,beta,gamm )
+  !f2(1) = -1*beta*u2(1)*u2(2)
+  !f2(2) = beta*u2(1)*u2(2)-gamm*u2(2)
+  !f2(3) = gamm*u2(2)
 
   t3 = t0 + dt
   u3(1:m) = u0(1:m) + dt * f2(1:m)
   call fvec (m, t3, u3, f3,beta,gamm )
+  !f3(1) = -1*beta*u3(1)*u3(2)
+  !f3(2) = beta*u3(1)*u3(2)-gamm*u3(2)
+  !f3(3) = gamm*u3(2)
   u(1:m) = u0(1:m) + ( dt /6.0 ) * ( &
                  f0(1:m) &
      + 2.0* f1(1:m) &
@@ -171,6 +186,7 @@ integer	:: i
 real (kind=selected_real_kind(8) ), intent(in) :: param(m)
 real (kind=selected_real_kind(8) ), intent(out) ::theta(m)
 real (kind=selected_real_kind(8) ) :: y,s
+call init_random_seed()
 s=0.0
 do i=1,m
 y= rand_gamma(real(1.0,kind=selected_real_kind(8)),param(i))
@@ -180,19 +196,48 @@ end do
 theta=(1.0/s)*theta
 end subroutine drawDirichlet
 
-
+function log_gamma(shape,scale) result(ans)
+real (kind=selected_real_kind(8) ) :: ans,r,lambda,w,h,eta,z,u2,u
+real (kind=selected_real_kind(8) ) :: shape,scale
+	  call init_random_seed
+	  call random_number(u2)
+	  h=-1.
+	  eta=1.
+	  do while((h/eta).le.u2)
+		w=shape/(exp(1.0)*(1-shape))
+		lambda=(1.0/shape)-1.0
+		r=1./(1.+w)
+		call init_random_seed()
+		call random_number(u)
+		if(u.le.r)then
+		z=-LOG(u/r)
+		else
+		call init_random_seed()
+		call random_number(u)
+		z=log(u)/lambda
+		end if
+		h=(1./GAMMA(shape+1))*EXP(-z-EXP(-z/shape))
+		if(z .ge. 0.) then
+		eta=(1./GAMMA(shape+1))*EXP(-z)
+		else
+		eta=(1./GAMMA(shape+1))*w*lambda*EXP(lambda*z)
+		end if
+		call init_random_seed
+	    call random_number(u2)
+		end do
+		ans=-z/shape
+end function
 
 RECURSIVE FUNCTION rand_gamma(shape, scale) RESULT(ans)
 	implicit none
-	real (kind=selected_real_kind(8) ) :: ans
+	real (kind=selected_real_kind(8) ) :: ans,w
 	real (kind=selected_real_kind(8) ), intent(in) :: shape, scale !shape and scale
-     	real (kind=selected_real_kind(8) ) :: u,w,d,c,x,xsq,g,v
+     	real (kind=selected_real_kind(8) ) :: u,d,c,x,xsq,g,v
      IF (shape <= 0.0) THEN
 
         WRITE(*,*) "Shape PARAMETER must be positive"
       END IF
       IF (scale <= 0.0) THEN
-
         WRITE(*,*) "Scale PARAMETER must be positive"
       END IF
       
@@ -238,7 +283,7 @@ SUBROUTINE init_random_seed()
           
             CALL SYSTEM_CLOCK(COUNT=clock)
 	    clock2=clock
-            seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+            seed = clock + 9929 * (/ (i - 1, i = 1, n) /)
             CALL RANDOM_SEED(PUT = seed)
           
             DEALLOCATE(seed)
@@ -250,10 +295,10 @@ END SUBROUTINE
 
 FUNCTION rand_beta(a, b) RESULT(ans)
 	implicit none
-	real(kind=selected_real_kind(8) ), intent(in) :: a,b
-	real(kind=selected_real_kind(8) )			  :: ans
-    real(kind=selected_real_kind(8) ) 			  :: u,v
-	
+	real*8, intent(in) :: a,b
+	real*8 :: ans
+      	real*8 :: u,v
+		call init_random_seed()
       IF ((a <= 0.0) .OR. (b <= 0.0)) THEN
 
         WRITE(*,*) "Beta PARAMETERs must be positive"
@@ -262,27 +307,24 @@ FUNCTION rand_beta(a, b) RESULT(ans)
        u = rand_gamma(a, 1.0_8)
        v = rand_gamma(b, 1.0_8)
        ans = u / (u + v)
-	   
 END FUNCTION
 
-FUNCTION rand_normal(mean,stdev) RESULT(c)
-	implicit none
-	real(kind=selected_real_kind(8) ), intent(in) :: mean, stdev
-    real(kind=selected_real_kind(8) ) :: theta,r,c
-	real(kind=selected_real_kind(8) ), dimension(2) :: temp
-	real(kind=selected_real_kind(8) ),parameter :: PI_8 = 4*ATAN(1.0_8)
-	
+function rand_normal ( a, b)
+  implicit none
 
-	call init_random_seed()
-	
-        CALL RANDOM_NUMBER(temp)
-	!print*,temp
-        r=(-2.0*log(temp(1)))**0.5
-        theta = 2.0*PI_8*temp(2)
-        c = mean+stdev*r*sin(theta)
+  real ( kind = selected_real_kind(8) ) :: a,b,r1,r2,rand_normal,two
+  real ( kind = selected_real_kind(8) ), parameter :: pi = 4*ATAN(real(1.0,kind=selected_real_kind(8)))
+  
+  call init_random_seed()
+  call random_number(r1)
+  call random_number(r2)
+  two=2.0
+  rand_normal = sqrt ( - two * log ( r1 ) ) * cos ( two * pi * r2 )
 
-      
-END FUNCTION
+  rand_normal = a + b * rand_normal
+
+  return
+end function
 
 end module
 
@@ -309,12 +351,10 @@ real ( kind=selected_real_kind(8) ), intent (inout):: theta(3,K), y(K),theta0(3)
 real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
 integer 					   :: seed,clock,count_rate,count_max,i,K
 
-call init_random_seed()
 call rk4vec(3, t0, theta0, dt, fvec, theta(1,1),beta,gamm)
  y(1)=rand_beta(lambda*theta(2,1), lambda*(1-theta(2,1)))
 do i=2,K
- call init_random_seed()
- call rk4vec(3, t0, theta(:,i-1), dt, fvec, theta(:,i),beta,gamm)
+ call rk4Vec(3, t0, theta(:,i-1), dt, fvec, theta(:,i),beta,gamm)
  call drawDirichlet(3, kappa*theta(:,i),theta(:,i))
  y(i)=rand_beta(lambda*theta(2,i), lambda*(1-theta(2,i)))
 end do
@@ -326,20 +366,17 @@ function DBSSM_FUNC(K,dt, t0, beta,gamm,kappa,lambda,theta0) result(y_and_theta)
  use DIFF_SOLVER
  use DIFF
 
-real ( kind=selected_real_kind(8) ), intent (in)   :: dt,t0
-real ( kind=selected_real_kind(8) ), intent (in)   :: theta0(3)
+real ( kind=selected_real_kind(8) )   :: dt,t0
+real ( kind=selected_real_kind(8) )   :: theta0(3)
 real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,K)
-real ( kind=selected_real_kind(8) ), intent (in)   :: beta,gamm,kappa, lambda
+real ( kind=selected_real_kind(8) )  :: beta,gamm,kappa, lambda
 integer 					   :: seed,clock,count_rate,count_max,i,K
  y_and_theta=0.0
- call init_random_seed()
- call rk4vec(3, t0, theta0, dt, fvec, y_and_theta(1:3,1),beta,gamm)
- !print *, y_and_theta(2,1)
+ call rk4Vec(3, t0, theta0, dt, fvec, y_and_theta(1:3,1),beta,gamm)
  y_and_theta(4,1)=rand_beta(lambda*y_and_theta(2,1), lambda*(1.0-y_and_theta(2,1)))
  !print *, y_and_theta
 do i=2,K
- call init_random_seed()
- call rk4vec(3, t0, y_and_theta(1:3,i-1), dt, fvec, y_and_theta(1:3,i),beta,gamm)
+ call rk4Vec(3, t0, y_and_theta(1:3,i-1), dt, fvec, y_and_theta(1:3,i),beta,gamm)
  call drawDirichlet(3, kappa*y_and_theta(1:3,i),y_and_theta(1:3,i))
  y_and_theta(4,i)=rand_beta(lambda*y_and_theta(2,i), lambda*(1-y_and_theta(2,i)))
 end do
@@ -348,26 +385,29 @@ end function
 
 end module
 
-program main
+!program main
 
-use DBSSM_MOD
-use random
-real ( kind=selected_real_kind(8) )   :: dt,t0,s
-real ( kind=selected_real_kind(8) )   :: theta0(3)
-real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,10),x
-real ( kind=selected_real_kind(8) )   :: beta,gamm,kappa, lambda
-integer 	:: seed,clock,count_rate,count_max,i,K,j
-t0=0.0
-s=0.0
-dt=1.0
-beta=2.0
-gamm=1.4
-lambda=2000
-kappa=1.0
-theta0(1)=0.9
-theta0(2)=0.0002
-theta0(3)=0.0998
-j=0
+!use DBSSM_MOD
+!use random
+!real ( kind=selected_real_kind(8) )   :: dt,t0,s
+!real ( kind=selected_real_kind(8) )   :: theta0(3)
+!real ( kind=selected_real_kind(8) )		   :: y_and_theta(4,10),x,theta(3),param(3)
+!real ( kind=selected_real_kind(8) )   :: beta,gamm,kappa, lambda
+!integer 	:: seed,clock,count_rate,count_max,i,K,j
+!integer		:: i,j
+!t0=0.0
+!s=0.0
+!dt=1.0
+!beta=2.0
+!gamm=1.4
+!lambda=2000
+!kappa=1.0
+!theta0(1)=0.9
+!theta0(2)=0.0002
+!theta0(3)=0.0998
+!param=(/1.0,1.0,1.0/)
+!j=0
+!x=0.0
 !do i=1,100
 !y_and_theta=DBSSM_FUNC(10,dt, t0, beta,gamm,kappa,lambda,theta0)
 !print *,i, "Y IS: ",y_and_theta(4,:)
@@ -375,10 +415,22 @@ j=0
 !j=j+1
 !end if
 !end do
-do i=1,1000
-x=rand_gamma(real(2.0,8),real(10000.0,8))
-print *, x
-end do
+!open(unit=10,file=Dirichlet1.txt)
+!open(unit=11,file=Dirichlet2.txt)
+!open(unit=12,file=Dirichlet3.txt)
+!do i=1,5000
+!call drawDirichlet(3,param, theta)
+!write (10,*) theta(1)
+!write (11,*) theta(2)
+!write (12,*) theta(3)
+!end do
+!s=0.0
+!do i=1,5000
+!s=s+rand_normal(real(2.0,8),real(1.0,8))
+!end do
+!print *, s/5000
+!x=x-s
+!print *, "VARIANCE IS: ", sum(x**2)/49999.0
 
 !print *, "OUTSIDE OF ST. DEV. ", j, " OUT OF 100 TIMES"
 !do i=1,100
@@ -386,4 +438,4 @@ end do
 !end do
 !print*, y_and_theta
 !print *, "test performed"
-end program
+!end program
