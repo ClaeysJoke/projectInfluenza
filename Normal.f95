@@ -17,8 +17,8 @@ contains
             DEALLOCATE(seed)
 
 	 !   do while(clock .eq. clock2)
-	!	CALL SYSTEM_CLOCK(COUNT=clock2)
-	 !   end do
+		!CALL SYSTEM_CLOCK(COUNT=clock2)
+	   ! end do
 END SUBROUTINE
   FUNCTION rand_normal(mean,stdev) RESULT(c)
 	   implicit none

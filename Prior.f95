@@ -24,10 +24,17 @@ contains
     ! Sample Kappa
     print *, "============ PRIOR ================="
 
-    X(1) = rand_gamma(shape,1.0D0/rate)
+    !X(1) = rand_gamma(shape,1.0D0/rate)
+    ! Initialize around found good value
+    X(1) = 500.0D0
+
     ! Sample Lambda
 
-    X(2) = rand_gamma(shape,1.0D0/rate)
+
+    !X(2) = rand_gamma(shape,1.0D0/rate)
+    ! Initialize around found value
+    X(2) = 90.0D0
+    !X(2) = 90.0D0 + 200.0D0
     ! "Sample" S0
 
     X(3) = 0.9D0
@@ -35,6 +42,8 @@ contains
 
     ! randGamma is still giving shitty values :'(
     X(4) = 0.00023D0
+
+    !X(4) = 0.0003D0
 
 
     ! "Sample" R0
@@ -49,12 +58,13 @@ contains
 
     ! "Sample" rho
 
-    !X(8) = getRhoIter(X)
+
     X(8) = getRho(X(3),X(4),X(6))
     !X(8) = 0.7D0
     ! "Sample" beta
 
     X(9) = getBeta(X)
+    !X(9) = 2.1D0
     ! "Sample" thetas, by simulating them with the ODE solver from theta0
 
 

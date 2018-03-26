@@ -6,7 +6,7 @@ module Sampling
   use GetModule
   implicit none
 
-  real*8 :: dt = 10.0D0
+  real*8 :: dt = 1.0D0
   real*8 :: h = 0.001D0
 
 contains
@@ -119,7 +119,7 @@ contains
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 0.00018**2
     !call init_random_seed()
-    trialX(4) = X(4) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
+    trialX(4) = X(4) - sqrt(variance)*gradient + sqrt(2*variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(4) < tiny(0.0D0)) then
       trialX(4) = tiny(0.0D0)
     elseif (trialX(4) > 0.1D0) then
@@ -139,7 +139,7 @@ contains
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 0.000036D0
     !call init_random_seed()
-    trialX(6) = X(6) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
+    trialX(6) = X(6) - sqrt(variance)*gradient + sqrt(2*variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(6)<trialX(4)) then
       trialX(6) = trialX(4)
     elseif (trialX(6) > 1.0D0) then
@@ -155,7 +155,7 @@ contains
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
     variance = 16.09
     !call init_random_seed()
-    trialX(7) = X(7) - sqrt(variance)*gradient + sqrt(variance)*rand_normal(0.0D0,1.0D0)
+    trialX(7) = X(7) - sqrt(variance)*gradient + sqrt(2*variance)*rand_normal(0.0D0,1.0D0)
     if (trialX(7)<1.0D0) then
       trialX(7) = 1.0D0
     elseif (trialX(7) > 35.0D0) then
@@ -250,7 +250,7 @@ contains
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
-    sigma2 = 0.00018**2
+    sigma2 = 2*0.00018**2
     mu = X(4) - sqrt(sigma2)*gradient
 
     I0Transition = exp(-(mu-destination(4))**2/(2*sigma2))/sqrt(2*PI*sigma2)
@@ -261,7 +261,7 @@ contains
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
-    sigma2 = 0.000036D0
+    sigma2 = 2*0.000036D0
     mu = X(6) - sqrt(sigma2)*gradient
 
     PITransition = exp(-(mu-destination(6))**2/(2*sigma2))/sqrt(2*PI*sigma2)
@@ -272,7 +272,7 @@ contains
     call LogPosterior(X+gradientStep,y,pdfPlus)
     call LogPosterior(X-2.0D0*gradientStep,y,pdfMinus)
     gradient = (-pdfPlus+pdfMinus)/abs(-pdfPlus+pdfMinus)
-    sigma2 = 16.09
+    sigma2 = 2*16.09D0
     mu = X(7) - sqrt(sigma2)*gradient
 
     PTTransition = exp(-(mu-destination(7))**2/(2*sigma2))/sqrt(2*PI*sigma2)
